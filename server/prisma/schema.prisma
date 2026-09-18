@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ----------------------------------------------------
+// Enums
+// ----------------------------------------------------
+
+enum TransactionType {
+  income
+  expense
+}
+
+enum AssetType {
+  crypto
+  stock
+}
+
+enum PortfolioTransactionType {
+  buy
+  sell
+}
+
+// ----------------------------------------------------
+// Models
+// ----------------------------------------------------
+
+model User {
+  id           BigInt   @id @default(autoincrement())
+  email        String   @unique @db.VarChar(255)
+  username     String   @unique @db.VarChar(50)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  wallets   Wallet[]
+  portfolio Portfolio?
+  assets    Asset[]
+
+  @@map("users")
+}
+
+model Wallet {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  name      String   @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  // Composite Unique: ชื่อกระเป๋าห้ามซ้ำกันต่อ 1 user
+  @@unique([userId, name])
+  @@map("wallets")
+}
+
+model Transaction {
+  id              BigInt          @id @default(autoincrement())
+  walletId        BigInt          @map("wallet_id")
+  transactionType TransactionType @map("transaction_type")
+  amount          Decimal         @db.Decimal(15, 2)
+  note            String?         @db.Text
+  transactionDate DateTime        @map("transaction_date") @db.Timestamp
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamp
+  updatedAt       DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+model Portfolio {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @unique @map("user_id") // 1 user = 1 portfolio
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  user         User                   @relation(fields: [userId], references: [id])
+  holdings     AssetHolding[]
+  transactions PortfolioTransaction[]
+
+  @@map("portfolio")
+}
+
+model Asset {
+  id        BigInt    @id @default(autoincrement())
+  userId    BigInt    @map("user_id")
+  name      String    @db.VarChar(100)
+  symbol    String    @db.VarChar(10)
+  assetType AssetType @map("asset_type")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holdings              AssetHolding[]
+  portfolioTransactions PortfolioTransaction[]
+
+  // Composite Uniques: ห้ามซ้ำ name หรือ symbol ของ user เดียวกัน
+  @@unique([userId, name])
+  @@unique([userId, symbol])
+  @@map("assets")
+}
+
+model AssetHolding {
+  id             BigInt   @id @default(autoincrement())
+  portfolioId    BigInt   @map("portfolio_id")
+  assetId        BigInt   @map("asset_id")
+  quantity       Decimal  @default(0.00) @db.Decimal(20, 8)
+  avgCostPerUnit Decimal  @default(0.00) @map("avg_cost_per_unit") @db.Decimal(20, 8)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  asset     Asset     @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  // Composite Unique Key
+  @@unique([portfolioId, assetId])
+  @@map("asset_holdings")
+}
+
+model PortfolioTransaction {
+  id              BigInt                   @id @default(autoincrement())
+  portfolioId     BigInt                   @map("portfolio_id")
+  assetId         BigInt                   @map("asset_id")
+  transactionType PortfolioTransactionType @map("transaction_type")
+  quantity        Decimal                  @db.Decimal(20, 8)
+  pricePerUnit    Decimal                  @map("price_per_unit") @db.Decimal(20, 8)
+  transactionDate DateTime                 @map("transaction_date") @db.Timestamp
+  createdAt       DateTime                 @default(now()) @map("created_at") @db.Timestamp
+  updatedAt       DateTime                 @default(now()) @updatedAt @map("updated_at") @db.Timestamp
+
+  // Relations
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id])
+  asset     Asset     @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@map("portfolio_transactions")
+}
