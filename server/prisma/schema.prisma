@@ -84,7 +84,7 @@ model Portfolio {
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp
 
   // Relations
-  user         User                   @relation(fields: [userId], references: [id])
+ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   holdings     AssetHolding[]
   transactions PortfolioTransaction[]
 
@@ -122,7 +122,7 @@ model AssetHolding {
 
   // Relations
   portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
-  asset     Asset     @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  asset     Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   // Composite Unique Key
   @@unique([portfolioId, assetId])
@@ -141,8 +141,8 @@ model PortfolioTransaction {
   updatedAt       DateTime                 @default(now()) @updatedAt @map("updated_at") @db.Timestamp
 
   // Relations
-  portfolio Portfolio @relation(fields: [portfolioId], references: [id])
-  asset     Asset     @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  asset     Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@map("portfolio_transactions")
 }
