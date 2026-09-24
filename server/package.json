@@ -25,6 +25,7 @@
   "scripts": {
     "lint-format": "bunx --bun @biomejs/biome check --write",
     "test": "vitest",
-    "dev": "bun run --hot src/index.ts"
+    "dev": "bun run --hot src/index.ts",
+    "db:studio": "prisma studio"
   }
 }

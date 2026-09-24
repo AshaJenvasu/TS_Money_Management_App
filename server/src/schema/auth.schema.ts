@@ -82,3 +82,33 @@ export const loginRoute = createRoute({
     },
   },
 });
+
+// ==========================================
+// 3. Get Profile Schemas & Route
+// ==========================================
+
+export const userProfileResponseSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+});
+
+// Define OpenAPI Route สำหรับ GET /api/v1/users/me
+export const getProfileRoute = createRoute({
+  method: "get",
+  path: "/api/v1/users/me",
+  tags: ["User"],
+  security: [{ Bearer: [] }], // กำหนดใน OpenAPI Docs ว่าต้องส่ง Bearer Token
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: userProfileResponseSchema,
+        },
+      },
+      description: "Get current user profile successfully",
+    },
+    401: {
+      description: "Unauthorized",
+    },
+  },
+});

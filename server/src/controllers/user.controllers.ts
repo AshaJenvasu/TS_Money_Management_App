@@ -1,18 +1,18 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { getUserRoute } from "../schema/user.schema";
+import { getProfileRoute } from "../schema/auth.schema";
+import { authMiddleware } from "../middlewares/auth.middleware";
 
 export const userController = new OpenAPIHono();
 
-// ผูก Handler เข้ากับ Route Spec
-userController.openapi(getUserRoute, (c) => {
-  const { id } = c.req.valid("param");
+userController.use("/api/v1/users/me", authMiddleware);
 
-  // Mock ข้อมูลสำหรับส่งกลับ (ในอนาคตส่วนนี้จะไปดึงมาจาก service/repository)
+userController.openapi(getProfileRoute, async (c) => {
+  const payload = c.get("jwtPayload") as { id: string; email: string };
+
   return c.json(
     {
-      id,
-      name: "John Doe",
-      age: 25,
+      id: payload.id,
+      email: payload.email,
     },
     200,
   );

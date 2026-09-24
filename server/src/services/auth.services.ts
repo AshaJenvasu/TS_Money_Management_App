@@ -1,5 +1,5 @@
 import { sign } from "hono/jwt";
-import { prisma } from "../config/prisma";
+import { UserRepository } from "../repositories/user.repository";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -14,24 +14,24 @@ export class AuthService {
     username: string;
     password: string;
   }) {
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [{ email: data.email }, { username: data.username }],
-      },
-    });
+    // 1. เรียกใช้ UserRepository
+    const existingUser = await UserRepository.findByEmailOrUsername(
+      data.email,
+      data.username,
+    );
 
     if (existingUser) {
       throw new Error("EMAIL_OR_USERNAME_EXISTS");
     }
 
+    // 2. Hash Password
     const hashedPassword = await Bun.password.hash(data.password);
 
-    const newUser = await prisma.user.create({
-      data: {
-        email: data.email,
-        username: data.username,
-        passwordHash: hashedPassword,
-      },
+    // 3. สร้าง User ผ่าน UserRepository
+    const newUser = await UserRepository.createUser({
+      email: data.email,
+      username: data.username,
+      passwordHash: hashedPassword,
     });
 
     return {
@@ -43,16 +43,14 @@ export class AuthService {
 
   // Logic สำหรับการ Login
   static async login(data: { identifier: string; password: string }) {
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [{ email: data.identifier }, { username: data.identifier }],
-      },
-    });
+    // 1. เรียกใช้ UserRepository ค้นหา User
+    const user = await UserRepository.findByIdentifier(data.identifier);
 
     if (!user) {
       throw new Error("INVALID_CREDENTIALS");
     }
 
+    // 2. Verify Password
     const isPasswordValid = await Bun.password.verify(
       data.password,
       user.passwordHash,
@@ -62,11 +60,12 @@ export class AuthService {
       throw new Error("INVALID_CREDENTIALS");
     }
 
+    // 3. Sign JWT Token
     const token = await sign(
       {
         id: user.id.toString(),
         email: user.email,
-        exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // หมดอายุใน 24 ชั่วโมง
+        exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
       },
       JWT_SECRET!,
     );

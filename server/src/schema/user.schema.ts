@@ -28,6 +28,7 @@ export const UserResponseSchema = z.object({
 export const getUserRoute = createRoute({
   method: "get",
   path: "/users/{id}",
+  tags: ["User"],
   request: {
     params: UserParamsSchema,
   },
