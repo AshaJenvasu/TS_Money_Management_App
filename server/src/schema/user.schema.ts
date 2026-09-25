@@ -1,4 +1,4 @@
-import { createRoute, z } from "@hono/zod-openapi";
+import {  z } from "@hono/zod-openapi";
 
 // 1. นิยาม Zod Schema สำหรับ Request Params (รับ id จาก path)
 export const UserParamsSchema = z.object({
@@ -24,22 +24,3 @@ export const UserResponseSchema = z.object({
   }),
 });
 
-// 3. นิยาม OpenAPI Route Specification
-export const getUserRoute = createRoute({
-  method: "get",
-  path: "/users/{id}",
-  tags: ["User"],
-  request: {
-    params: UserParamsSchema,
-  },
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: UserResponseSchema,
-        },
-      },
-      description: "Retrieve the user successfully",
-    },
-  },
-});

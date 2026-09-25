@@ -1,8 +1,72 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { registerRoute, loginRoute } from "../schema/auth.schema";
 import { AuthService } from "../services/auth.services";
+import { createRoute } from "@hono/zod-openapi";
+import {
+  LoginBodySchema,
+  LoginResponseSchema,
+  RegisterBodySchema,
+  RegisterResponseSchema,
+} from "../schema/auth.schema";
 
 export const authController = new OpenAPIHono();
+
+//  OpenAPI Route Specification
+export const registerRoute = createRoute({
+  method: "post",
+  path: "/api/v1/auth/register",
+  tags: ["Auth"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: RegisterBodySchema,
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      content: {
+        "application/json": {
+          schema: RegisterResponseSchema,
+        },
+      },
+      description: "User registered successfully",
+    },
+    400: {
+      description: "Invalid input / Email or Username already exists",
+    },
+  },
+});
+
+//  OpenAPI Route Specification
+export const loginRoute = createRoute({
+  method: "post",
+  path: "/api/v1/auth/login",
+  tags: ["Auth"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: LoginBodySchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: LoginResponseSchema,
+        },
+      },
+      description: "Login successful",
+    },
+    401: {
+      description: "Invalid credentials",
+    },
+  },
+});
 
 // 1. Controller: registerUser
 authController.openapi(registerRoute, async (c) => {
