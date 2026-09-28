@@ -7,6 +7,8 @@ import {
   RegisterBodySchema,
   RegisterResponseSchema,
 } from "../schema/auth.schema";
+import { setCookie, deleteCookie } from "hono/cookie";
+import { z } from "zod";
 
 export const authController = new OpenAPIHono();
 
@@ -68,6 +70,25 @@ export const loginRoute = createRoute({
   },
 });
 
+// OpenAPI Specification สำหรับ Logout
+export const logoutRoute = createRoute({
+  method: "post",
+  path: "/api/v1/auth/logout",
+  tags: ["Auth"],
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            message: z.string(),
+          }),
+        },
+      },
+      description: "Logout successful",
+    },
+  },
+});
+
 // 1. Controller: registerUser
 authController.openapi(registerRoute, async (c) => {
   const body = c.req.valid("json");
@@ -91,6 +112,15 @@ authController.openapi(loginRoute, async (c) => {
 
   try {
     const result = await AuthService.login(body);
+
+    // 🔒 สั่งฝาก Token ลง Cookie
+    setCookie(c, "auth_token", result.token, {
+      httpOnly: true, // ป้องกัน JS อ่านค่า (กัน XSS)
+      secure: process.env.NODE_ENV === "production", // ใช้ HTTPS ใน production
+      sameSite: "Lax", // ป้องกัน CSRF
+      path: "/",
+      maxAge: body.rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24, // 30 วัน หรือ 1 วัน
+    });
     return c.json(result, 200);
   } catch (error: any) {
     console.error("Login ERROR:", error);
@@ -100,4 +130,18 @@ authController.openapi(loginRoute, async (c) => {
     }
     return c.json({ message: "Internal Server Error" }, 500);
   }
+});
+
+// 3. Controller: logoutUser
+authController.openapi(logoutRoute, (c) => {
+  deleteCookie(c, "auth_token", {
+    path: "/",
+  });
+
+  return c.json(
+    {
+      message: "Logout successful",
+    },
+    200,
+  );
 });

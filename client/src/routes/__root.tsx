@@ -42,9 +42,15 @@ function RootLayout() {
     verifyUser();
   }, [token, setAuth, logout]);
 
-  const handleLogout = () => {
-    logout();
-    navigate({ to: "/login" });
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error("Logout ERROR:", error);
+    } finally {
+      logout();
+      navigate({ to: "/login" });
+    }
   };
 
   return (
