@@ -26,7 +26,9 @@ function RootLayout() {
       try {
         const data = await authService.getProfile();
 
-        setAuth(token, data.user);
+        if (data.user) {
+          setAuth(token, data.user);
+        }
       } catch (error) {
         if (isAxiosError(error) && error.response?.status === 401) {
           console.log("Token หมดอายุหรือไม่ถูกต้อง → Logout");
