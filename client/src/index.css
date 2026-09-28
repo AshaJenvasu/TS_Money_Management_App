@@ -1,2 +1,373 @@
 @import "tailwindcss";
-@plugin "daisyui";
+@plugin "daisyui" {
+  themes: dim --default;
+}
+
+@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Mali:wght@500;600&family=Noto+Sans+Thai:wght@400;500;600&family=Yomogi&display=swap");
+
+:root {
+  --ink: #1f2a5c;
+  --indigo: #5568e0;
+  --sakura: #ffc6da;
+  --pink: #f0669a;
+  --line: #bfd3f3;
+  --muted: #5c6899;
+  --err: #cf3d6b;
+  --ok: #1f8a69;
+
+  --bg: #141a36;
+  --f-th: "Mali", "Noto Sans Thai", system-ui, sans-serif;
+  --f-body: "Noto Sans Thai", system-ui, -apple-system, sans-serif;
+  --f-script: "Caveat", "Mali", cursive;
+  --f-jp: "Yomogi", "Hiragino Maru Gothic ProN", sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  font-family: var(--f-body);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+/* Stage & Container */
+.login-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0 28px;
+}
+
+.login-stage {
+  position: relative;
+  width: min(100%, 480px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 32px;
+  box-shadow: 0 30px 80px -30px rgba(31, 42, 92, 0.55);
+  min-height: 800px;
+  background: #141a36;
+}
+
+.login-view {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 22px 24px;
+  min-height: 800px;
+  flex: 1;
+  --accent: var(--indigo);
+  --accent-soft: rgba(85, 104, 224, 0.22);
+}
+
+.login-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* Brand & Typography */
+.anime-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  text-shadow: 0 1px 8px rgba(31, 42, 92, 0.4);
+  z-index: 1;
+}
+.anime-brand .brand-name {
+  font: 700 34px/0.95 var(--f-script);
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+.anime-brand .brand-tag {
+  font: 600 19px/1 var(--f-script);
+  margin: 2px 0 0;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 7px;
+}
+
+.anime-jp {
+  margin: 26px 0 0;
+  font: 400 25px/1.4 var(--f-jp);
+  color: #fff;
+  transform: rotate(-3deg);
+  transform-origin: left;
+  text-shadow:
+    0 1px 0 #2c3984,
+    0 0 14px rgba(28, 38, 100, 0.65);
+  z-index: 1;
+}
+.anime-gap {
+  flex: 1;
+  min-height: 96px;
+}
+.anime-slogan {
+  align-self: flex-start;
+  margin: 0 0 4px 4px;
+  font: 600 24px/1.05 var(--f-script);
+  color: #fff;
+  text-shadow: 0 1px 8px rgba(28, 38, 100, 0.6);
+  transform: rotate(-4deg);
+  z-index: 1;
+}
+
+/* Card & Mascot */
+.anime-cardwrap {
+  position: relative;
+  width: 100%;
+  max-width: 410px;
+  margin: 0 auto;
+  z-index: 2;
+}
+.anime-mascot {
+  position: absolute;
+  z-index: 1;
+  right: 12px;
+  bottom: calc(100% - 12px);
+  pointer-events: none;
+  width: 190px;
+}
+.anime-card {
+  position: relative;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.93);
+  backdrop-filter: blur(14px) saturate(1.2);
+  border-radius: 28px;
+  padding: 22px 22px 18px;
+  box-shadow:
+    0 26px 60px -22px rgba(31, 42, 92, 0.55),
+    inset 0 1px 0 #fff;
+}
+.anime-card .title {
+  font: 700 38px/1 var(--f-script);
+  margin: 0;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.anime-card .mark {
+  background: linear-gradient(
+    transparent 66%,
+    rgba(255, 132, 176, 0.7) 66% 86%,
+    transparent 86%
+  );
+  padding: 0 3px;
+}
+.anime-card .sub {
+  margin: 10px 0 16px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--muted);
+  max-width: 36ch;
+}
+
+/* Fields & Controls */
+.anime-field + .anime-field {
+  margin-top: 10px;
+}
+.anime-control {
+  position: relative;
+}
+.anime-control .lead-ic {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 21px;
+  height: 21px;
+  color: #6e7bb3;
+  pointer-events: none;
+}
+.anime-control input {
+  width: 100%;
+  height: 46px;
+  border-radius: 14px;
+  border: 1.5px solid var(--line);
+  background: rgba(255, 255, 255, 0.92);
+  padding: 0 46px;
+  font: 500 15px var(--f-body);
+  color: var(--ink);
+  box-sizing: border-box;
+}
+.anime-control input:focus {
+  outline: none;
+  border-color: var(--indigo);
+  box-shadow: 0 0 0 4px rgba(85, 104, 224, 0.22);
+}
+.anime-eye {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border: 0;
+  background: transparent;
+  color: #6e7bb3;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  padding: 0;
+}
+
+.anime-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 12px 2px 14px;
+  font-size: 13px;
+}
+.anime-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--muted);
+}
+.anime-link {
+  border: 0;
+  background: none;
+  padding: 6px 2px;
+  color: var(--indigo);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* Buttons */
+.anime-btn {
+  width: 100%;
+  height: 48px;
+  border: 0;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font: 600 16px var(--f-th);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    box-shadow 0.2s;
+}
+.anime-btn-login {
+  background: linear-gradient(135deg, #6e7ff2, #4a5dd6);
+  color: #fff;
+  box-shadow: 0 12px 24px -12px rgba(74, 93, 214, 0.9);
+}
+.anime-btn-ghost {
+  background: #fff;
+  color: var(--indigo);
+  border: 1.5px solid var(--line);
+  height: 46px;
+  text-decoration: none;
+}
+
+.anime-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.anime-or::before,
+.anime-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line));
+}
+.anime-or::after {
+  background: linear-gradient(270deg, transparent, var(--line));
+}
+
+/* Navbar Container ใหม่ */
+.anime-navbar {
+  width: 100%;
+  height: 64px;
+  background: rgba(20, 26, 54, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(191, 211, 243, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+}
+
+/* แบรนด์ฝั่งซ้าย */
+.anime-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.anime-nav-logo {
+  width: 32px;
+  height: 32px;
+  background: #5568e0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(85, 104, 224, 0.4);
+}
+
+.anime-nav-title {
+  font-family: "Caveat", "Mali", cursive;
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+/* ปุ่ม Switcher (Login / Register) ฝั่งขวา แบบ Pill Capsule */
+.anime-nav-switch {
+  display: flex;
+  align-items: center;
+  background: rgba(30, 42, 102, 0.6);
+  padding: 4px;
+  border-radius: 99px;
+  border: 1px solid rgba(191, 211, 243, 0.25);
+  gap: 4px;
+}
+
+.anime-nav-item {
+  padding: 6px 18px;
+  border-radius: 99px;
+  font-family: "Mali", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #a9b8ea;
+  text-decoration: none;
+  transition: all 0.25s ease;
+}
+
+.anime-nav-item:hover {
+  color: #ffffff;
+}
+
+/* สถานะเมื่อ Active (หน้านั้นๆ) */
+.anime-nav-item.active {
+  background: linear-gradient(135deg, #6e7ff2, #4a5dd6);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(74, 93, 214, 0.5);
+}
