@@ -1,9 +1,8 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Mali:wght@500;600&family=Noto+Sans+Thai:wght@400;500;600&family=Yomogi&display=swap");
 @plugin "daisyui" {
   themes: dim --default;
 }
-
-@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Mali:wght@500;600&family=Noto+Sans+Thai:wght@400;500;600&family=Yomogi&display=swap");
 
 :root {
   --ink: #1f2a5c;

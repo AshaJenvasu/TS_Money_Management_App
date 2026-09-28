@@ -4,41 +4,85 @@ import { useAuthStore } from "../../../stores/useAuthStore";
 import { loginSchema } from "../../../schema/auth.schema";
 import { SvgSprites } from "./SvgSprites";
 import { LoginScene } from "./LoginScene";
+import { authService } from "../../../api/auth.services";
+import { InputField } from "../../ui/InputField";
+import { isAxiosError } from "axios";
 
 export function LoginForm() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
 
+  // Form States
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(false);
+
+  // UI / Status States
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [errorMsg, setErrorMsg] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
+    setErrors({});
 
+    // 1. Zod Validation ก่อนส่ง API
     const result = loginSchema.safeParse({ identifier, password });
     if (!result.success) {
-      setErrorMsg(result.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
+      const fieldErrors: Record<string, string> = {};
+      result.error.issues.forEach((issue) => {
+        if (issue.path[0]) {
+          fieldErrors[issue.path[0].toString()] = issue.message;
+        }
+      });
+      setErrors(fieldErrors);
       return;
     }
 
-    const mockToken = "mock-jwt-token-123456";
-    const mockUser = { id: "usr-1", email: identifier };
-    setAuth(mockToken, mockUser);
-    navigate({ to: "/dashboard" });
+    setLoading(true);
+
+    try {
+      // 1. ยิง API Login ฝั่ง Backend
+      const res = await authService.login({
+        identifier,
+        password,
+        rememberMe,
+      });
+
+      // 2. ดึง token และ user จาก response (ปรับ key ตามที่ backend ส่งกลับมา เช่น res.token, res.user)
+      const token = res.token;
+      const user = res.user || { email: identifier }; // กรณี backend ส่งมาแค่ token ให้ fallback user ไว้ก่อน
+
+      // 3. เซ็ตค่าลง Zustand Store
+      if (token) {
+        setAuth(token, user);
+      }
+
+      alert(res.message || "เข้าสู่ระบบสำเร็จ!");
+      navigate({ to: "/dashboard" });
+    } catch (err: unknown) {
+      if (isAxiosError(err)) {
+        setErrorMsg(
+          err.response?.data?.message || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
+        );
+      } else {
+        setErrorMsg("เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ กรุณาลองใหม่อีกครั้ง");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="login-shell">
-      {/* 1. เรียกก้อน Sprites SVG */}
+      {/* 1. Sprites SVG */}
       <SvgSprites />
 
       <main className="login-stage">
         <section className="login-view">
-          {/* 2. เรียกก้อน ฉากหลัง SVG */}
+          {/* 2. Background SVG */}
           <LoginScene />
 
           {/* Logo & Brand */}
@@ -165,68 +209,58 @@ export function LoginForm() {
                 <div
                   style={{
                     color: "#CF3D6B",
-                    fontSize: "12px",
-                    marginBottom: "8px",
+                    fontSize: "13px",
+                    marginBottom: "12px",
+                    padding: "8px 12px",
+                    background: "rgba(207, 61, 107, 0.1)",
+                    borderRadius: "10px",
                   }}
                 >
                   {errorMsg}
                 </div>
               )}
 
-              <form onSubmit={handleLogin}>
-                <div className="anime-field">
-                  <div className="anime-control">
-                    <svg className="lead-ic">
-                      <use href="#i-mail" />
-                    </svg>
-                    <input
-                      type="text"
-                      placeholder="Email หรือ Username"
-                      value={identifier}
-                      onChange={(e) => setIdentifier(e.target.value)}
-                    />
-                  </div>
-                </div>
+              <form onSubmit={handleLogin} noValidate>
+                {/* 1. Identifier Field (Email / Username) */}
+                <InputField
+                  placeholder="Email หรือ Username"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  iconId="i-mail"
+                  error={errors.identifier}
+                />
 
-                <div className="anime-field">
-                  <div className="anime-control">
-                    <svg className="lead-ic">
-                      <use href="#i-lock" />
-                    </svg>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="anime-eye"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      <svg className="ic">
-                        <use href={showPassword ? "#i-eye-off" : "#i-eye"} />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
+                {/* 2. Password Field */}
+                <InputField
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  iconId="i-lock"
+                  error={errors.password}
+                  isPassword
+                  showPassword={showPassword}
+                  onTogglePassword={() => setShowPassword(!showPassword)}
+                />
 
+                {/* Remember Me */}
                 <div className="anime-row">
                   <label className="anime-check">
                     <input
                       type="checkbox"
-                      checked={remember}
-                      onChange={(e) => setRemember(e.target.checked)}
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
                     />
                     <span>จดจำฉันไว้</span>
                   </label>
-                  {/* <button type="button" className="anime-link">
-                    ลืมรหัสผ่าน?
-                  </button> */}
                 </div>
 
-                <button type="submit" className="anime-btn anime-btn-login">
-                  <span>เข้าสู่ระบบ</span>
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  className="anime-btn anime-btn-login"
+                  disabled={loading}
+                >
+                  <span>{loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}</span>
                   <svg className="ic" style={{ width: 20, height: 20 }}>
                     <use href="#i-arrow" />
                   </svg>

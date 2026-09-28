@@ -20,11 +20,24 @@ export const RegisterResponseSchema = z.object({
 // ==========================================
 export const LoginBodySchema = z.object({
   identifier: z.string().openapi({ example: "user@example.com" }),
-  password: z.string().min(6).openapi({ example: "password123" }),
+
+  password: z.string().min(6).openapi({
+    example: "password123",
+  }),
+
+  rememberMe: z.boolean().openapi({
+    example: true,
+  }),
 });
 
 export const LoginResponseSchema = z.object({
-  token: z.string().openapi({ example: "eyJhbGciOiJIUzI1NiIsIn..." }),
+  message: z.string(),
+  token: z.string(),
+  user: z.object({
+    id: z.union([z.string(), z.number()]),
+    username: z.string(),
+    email: z.string(),
+  }),
 });
 
 // ==========================================

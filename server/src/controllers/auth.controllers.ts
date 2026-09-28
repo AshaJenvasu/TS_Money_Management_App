@@ -76,6 +76,8 @@ authController.openapi(registerRoute, async (c) => {
     const result = await AuthService.register(body);
     return c.json(result, 201);
   } catch (error: any) {
+    console.error("Register ERROR:", error);
+
     if (error.message === "EMAIL_OR_USERNAME_EXISTS") {
       return c.json({ message: "Email or Username already exists" }, 400);
     }
@@ -91,6 +93,8 @@ authController.openapi(loginRoute, async (c) => {
     const result = await AuthService.login(body);
     return c.json(result, 200);
   } catch (error: any) {
+    console.error("Login ERROR:", error);
+
     if (error.message === "INVALID_CREDENTIALS") {
       return c.json({ message: "Invalid credentials" }, 401);
     }

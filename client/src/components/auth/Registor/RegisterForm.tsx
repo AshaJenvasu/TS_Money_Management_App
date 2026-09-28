@@ -5,6 +5,8 @@ import { SvgSprites } from "./SvgSprites";
 import { MascotCat } from "./MascotCat";
 import { InputField } from "../../ui/InputField";
 import "./RegisterPage.css";
+import { authService } from "../../../api/auth.services";
+import { isAxiosError } from "axios";
 
 export function RegisterForm() {
   const navigate = useNavigate();
@@ -44,7 +46,7 @@ export function RegisterForm() {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
 
@@ -66,8 +68,22 @@ export function RegisterForm() {
       return;
     }
 
-    alert("สมัครสมาชิกสำเร็จ!");
-    navigate({ to: "/login" });
+    try {
+      // ยิง API ยืนยันการสมัคร
+      await authService.register({ username, email, password });
+      alert("สมัครสมาชิกสำเร็จ!");
+      navigate({ to: "/login" });
+    } catch (err: unknown) {
+      // เช็กประเภท Error แบบ Type-safe ป้องกัน any
+      if (isAxiosError(err)) {
+        alert(
+          err.response?.data?.message ||
+            "สมัครสมาชิกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+        );
+      } else {
+        alert("เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ กรุณาลองใหม่อีกครั้ง");
+      }
+    }
   };
 
   return (
