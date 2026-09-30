@@ -3,6 +3,7 @@ import { Scalar } from "@scalar/hono-api-reference";
 import { userController } from "./controllers/user.controllers";
 import { healthController } from "./health/health.controllers";
 import { authController } from "./controllers/auth.controllers";
+import { walletController } from "./controllers/wallet.controllers";
 import { cors } from "hono/cors";
 
 const app = new OpenAPIHono();
@@ -26,6 +27,7 @@ app.get("/", (c) => {
 app.route("/", userController);
 app.route("/", healthController);
 app.route("/", authController);
+app.route("/", walletController);
 
 // Scalar API Reference
 app.route(

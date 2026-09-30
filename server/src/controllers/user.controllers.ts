@@ -1,6 +1,5 @@
-import { OpenAPIHono } from "@hono/zod-openapi";
+import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { authMiddleware } from "../middlewares/auth.middleware";
-import { createRoute } from "@hono/zod-openapi";
 import { UserParamsSchema, UserResponseSchema } from "../schema/user.schema";
 import { userProfileResponseSchema } from "../schema/auth.schema";
 
