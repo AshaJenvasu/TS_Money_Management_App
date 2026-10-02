@@ -229,8 +229,8 @@ walletController.openapi(getWalletsRoute, async (c) => {
     email: string;
   };
 
-  // แปลง User ID จาก String ใน JWT เป็น BigInt สำหรับใช้ Query Database
-  const userId = BigInt(payload.id);
+  // // แปลง User ID จาก String ใน JWT เป็น BigInt สำหรับใช้ Query Database
+  // const userId = BigInt(payload.id);
 
   // TODO: นำ userId ไปเรียก Service ในขั้นถัดไป
   return c.json([], 200);
@@ -244,8 +244,8 @@ walletController.openapi(createWalletRoute, async (c) => {
     email: string;
   };
 
-  // แปลง User ID จาก String เป็น BigInt สำหรับใช้กับ Prisma
-  const userId = BigInt(payload.id);
+  // // แปลง User ID จาก String เป็น BigInt สำหรับใช้กับ Prisma
+  // const userId = BigInt(payload.id);
 
   // ดึงข้อมูล name ที่ผ่าน Zod Validation แล้วจาก Request Body
   const { name } = c.req.valid("json");
@@ -270,8 +270,8 @@ walletController.openapi(getWalletRoute, async (c) => {
     email: string;
   };
 
-  // แปลง User ID จาก String เป็น BigInt สำหรับใช้กับ Prisma
-  const userId = BigInt(payload.id);
+  // // แปลง User ID จาก String เป็น BigInt สำหรับใช้กับ Prisma
+  // const userId = BigInt(payload.id);
 
   // ดึง Wallet ID จาก URL และแปลงเป็น BigInt
   const { id } = c.req.valid("param");
@@ -297,8 +297,8 @@ walletController.openapi(updateWalletRoute, async (c) => {
     email: string;
   };
 
-  // แปลง User ID จาก String ใน JWT เป็น BigInt
-  const userId = BigInt(payload.id);
+  // // แปลง User ID จาก String ใน JWT เป็น BigInt
+  // const userId = BigInt(payload.id);
 
   // ดึง Wallet ID จาก URL และแปลงเป็น BigInt
   const { id } = c.req.valid("param");
@@ -329,8 +329,8 @@ walletController.openapi(deleteWalletRoute, async (c) => {
     email: string;
   };
 
-  // แปลง User ID จาก String ใน JWT เป็น BigInt
-  const userId = BigInt(payload.id);
+  // // แปลง User ID จาก String ใน JWT เป็น BigInt
+  // const userId = BigInt(payload.id);
 
   // ดึง Wallet ID จาก URL และแปลงเป็น BigInt
   const { id } = c.req.valid("param");
@@ -350,8 +350,8 @@ walletController.openapi(getWalletBalanceRoute, async (c) => {
     email: string;
   };
 
-  // แปลง User ID จาก String ใน JWT เป็น BigInt
-  const userId = BigInt(payload.id);
+  // // แปลง User ID จาก String ใน JWT เป็น BigInt
+  // const userId = BigInt(payload.id);
 
   // ดึง Wallet ID จาก URL และแปลงเป็น BigInt
   const { id } = c.req.valid("param");

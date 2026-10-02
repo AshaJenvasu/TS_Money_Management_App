@@ -27,6 +27,9 @@
     "test": "vitest",
     "dev": "bun run --hot src/index.ts",
     "db:studio": "prisma studio",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "db:push": "bun prisma db push",
+    "db:deploy": "bun prisma migrate deploy",
+    "db:migrate:dev": "bun prisma migrate dev"
   }
 }

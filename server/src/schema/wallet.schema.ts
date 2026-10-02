@@ -1,8 +1,11 @@
 import { z } from "@hono/zod-openapi";
 
 // 1. Request Params สำหรับ /wallets/:id
+
+//zod แปลงstring เป็น bigintได้
+
 export const WalletParamsSchema = z.object({
-  id: z.string().openapi({
+  id: z.coerce.bigint().openapi({
     param: {
       name: "id",
       in: "path",
