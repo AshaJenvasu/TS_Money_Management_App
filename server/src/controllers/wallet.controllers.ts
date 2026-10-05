@@ -8,6 +8,7 @@ import {
   WalletUpdateSchema,
   WalletBalanceResponseSchema,
 } from "../schema/wallet.schema";
+import { WalletService } from "../services/wallet.services";
 
 export const walletController = new OpenAPIHono();
 
@@ -228,8 +229,17 @@ walletController.openapi(getWalletsRoute, async (c) => {
     id: string;
     email: string;
   };
-  // TODO: นำ userId ไปเรียก Service ในขั้นถัดไป
-  return c.json([], 200);
+
+  const userId = BigInt(payload.id);
+
+  try {
+    // เรียก Service เพื่อดึงข้อมูล Wallet
+    const wallets = await WalletService.getWallets(userId);
+    return c.json(wallets, 200);
+  } catch (error: any) {
+    console.error("Get Wallets Error:", error);
+    return c.json({ message: "Internal Server Error" }, 500);
+  }
 });
 
 // 2. Controller: createWalletRoute
@@ -240,22 +250,22 @@ walletController.openapi(createWalletRoute, async (c) => {
     email: string;
   };
 
-  // // แปลง User ID จาก String เป็น BigInt สำหรับใช้กับ Prisma
-  // const userId = BigInt(payload.id);
+  const userId = BigInt(payload.id);
 
   // ดึงข้อมูล name ที่ผ่าน Zod Validation แล้วจาก Request Body
   const { name } = c.req.valid("json");
 
-  // TODO: เรียก Service เพื่อสร้าง Wallet
-  return c.json(
-    {
-      id: "",
-      name,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    201,
-  );
+  try {
+    const newWallet = await WalletService.createWallet(userId, name);
+    return c.json(newWallet, 201);
+  } catch (error: any) {
+    console.error("Create Wallet Error:", error);
+
+    if (error.message === "WALLET_NAME_EXISTS") {
+      return c.json({ message: "Wallet name already exists" }, 409);
+    }
+    return c.json({ message: "Internal Server Error" }, 500);
+  }
 });
 
 // 3. Controller: getWalletRoute
@@ -266,23 +276,20 @@ walletController.openapi(getWalletRoute, async (c) => {
     email: string;
   };
 
-  // // แปลง User ID จาก String เป็น BigInt สำหรับใช้กับ Prisma
-  // const userId = BigInt(payload.id);
+  const userId = BigInt(payload.id);
+  const { id: walletId } = c.req.valid("param"); // ผ่าน Zod z.coerce.bigint() แปลงเป็น bigint แล้ว
 
-  // ดึง Wallet ID จาก URL และแปลงเป็น BigInt
-  const { id } = c.req.valid("param");
-  const walletId = BigInt(id);
+  try {
+    const wallet = await WalletService.getWalletById(walletId, userId);
+    return c.json(wallet, 200);
+  } catch (error: any) {
+    console.error("Get Wallet By ID Error:", error);
 
-  // TODO: เรียก Service เพื่อดึง Wallet
-  return c.json(
-    {
-      id: id,
-      name: "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    200,
-  );
+    if (error.message === "WALLET_NOT_FOUND") {
+      return c.json({ message: "Wallet not found" }, 404);
+    }
+    return c.json({ message: "Internal Server Error" }, 500);
+  }
 });
 
 // 4. Controller: updateWalletRoute
@@ -293,24 +300,32 @@ walletController.openapi(updateWalletRoute, async (c) => {
     email: string;
   };
 
+  const userId = BigInt(payload.id);
+
   // ดึง Wallet ID จาก URL และแปลงเป็น BigInt
-  const { id } = c.req.valid("param");
+  const { id: walletId } = c.req.valid("param");
 
   // ดึง name ที่ผ่าน Zod Validation แล้วจาก Request Body
   const { name } = c.req.valid("json");
 
-  // TODO: ส่ง userId, walletId และ name ให้ Service จัดการต่อ
-
-  // Temporary Response เพราะตอนนี้ยังไม่ได้ต่อ Service
-  return c.json(
-    {
-      id,
+  try {
+    const updatedWallet = await WalletService.updateWallet(
+      walletId,
+      userId,
       name,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    200,
-  );
+    );
+    return c.json(updatedWallet, 200);
+  } catch (error: any) {
+    console.error("Update Wallet Error:", error);
+
+    if (error.message === "WALLET_NOT_FOUND") {
+      return c.json({ message: "Wallet not found" }, 404);
+    }
+    if (error.message === "WALLET_NAME_EXISTS") {
+      return c.json({ message: "Wallet name already exists" }, 409);
+    }
+    return c.json({ message: "Internal Server Error" }, 500);
+  }
 });
 
 // 5. Controller: deleteWalletRoute
@@ -321,13 +336,22 @@ walletController.openapi(deleteWalletRoute, async (c) => {
     email: string;
   };
 
-  // ดึง Wallet ID จาก URL และแปลงเป็น BigInt
-  const { id } = c.req.valid("param");
+  const userId = BigInt(payload.id);
 
-  // TODO: ส่ง userId และ walletId ให้ Service จัดการต่อ
+  // ดึง Wallet ID จาก URL
+  const { id: walletId } = c.req.valid("param");
 
-  // Temporary Response เพราะตอนนี้ยังไม่ได้ต่อ Service
-  return c.body(null, 204);
+  try {
+    await WalletService.deleteWallet(walletId, userId);
+    return c.body(null, 204);
+  } catch (error: any) {
+    console.error("Delete Wallet Error:", error);
+
+    if (error.message === "WALLET_NOT_FOUND") {
+      return c.json({ message: "Wallet not found" }, 404);
+    }
+    return c.json({ message: "Internal Server Error" }, 500);
+  }
 });
 
 // 6. Controller: getWalletBalanceRoute
@@ -338,16 +362,23 @@ walletController.openapi(getWalletBalanceRoute, async (c) => {
     email: string;
   };
 
-  // ดึง Wallet ID จาก URL และแปลงเป็น BigInt
-  const { id } = c.req.valid("param");
+  const userId = BigInt(payload.id);
 
-  // TODO: ส่ง userId และ walletId ให้ Service คำนวณ Balance
+  // ดึง Wallet ID จาก URL
+  const { id: walletId } = c.req.valid("param");
 
-  // Temporary Response เพราะตอนนี้ยังไม่ได้ต่อ Service
-  return c.json(
-    {
-      balance: "0.00",
-    },
-    200,
-  );
+  try {
+    const balanceResult = await WalletService.getWalletBalance(
+      walletId,
+      userId,
+    );
+    return c.json(balanceResult, 200);
+  } catch (error: any) {
+    console.error("Get Wallet Balance Error:", error);
+
+    if (error.message === "WALLET_NOT_FOUND") {
+      return c.json({ message: "Wallet not found" }, 404);
+    }
+    return c.json({ message: "Internal Server Error" }, 500);
+  }
 });
