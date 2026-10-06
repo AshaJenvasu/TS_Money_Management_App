@@ -13,12 +13,19 @@ export class WalletService {
       }
 
       // แปลงโครงสร้างข้อมูล BigInt และ Date ให้เป็น String ตาม API Schema
-      return wallets.map((wallet) => ({
-        id: wallet.id.toString(),
-        name: wallet.name,
-        createdAt: wallet.createdAt.toISOString(),
-        updatedAt: wallet.updatedAt.toISOString(),
-      }));
+      return wallets.map(
+        (wallet: {
+          id: bigint;
+          name: string;
+          createdAt: Date;
+          updatedAt: Date;
+        }) => ({
+          id: wallet.id.toString(),
+          name: wallet.name,
+          createdAt: wallet.createdAt.toISOString(),
+          updatedAt: wallet.updatedAt.toISOString(),
+        }),
+      );
     } catch (_error) {
       // โยน Error ต่อเพื่อให้ Controller จัดการตอบกลับเป็น 500 Internal Server Error
       throw new Error("INTERNAL_SERVER_ERROR");
