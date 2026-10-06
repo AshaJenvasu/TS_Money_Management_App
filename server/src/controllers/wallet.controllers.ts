@@ -220,7 +220,7 @@ export const getWalletBalanceRoute = createRoute({
 });
 
 // บังคับให้ทุก Route ใต้ /api/v1/wallets ต้องผ่าน Authentication
-walletController.use("/api/v1/wallets", authMiddleware);
+walletController.use("*", authMiddleware);
 
 // 1. Controller: getWalletsRoute
 walletController.openapi(getWalletsRoute, async (c) => {
@@ -270,16 +270,22 @@ walletController.openapi(createWalletRoute, async (c) => {
 
 // 3. Controller: getWalletRoute
 walletController.openapi(getWalletRoute, async (c) => {
-  // ดึง User ID ของผู้ที่ Login อยู่จาก JWT
-  const payload = c.get("jwtPayload") as {
-    id: string;
-    email: string;
-  };
-
-  const userId = BigInt(payload.id);
-  const { id: walletId } = c.req.valid("param"); // ผ่าน Zod z.coerce.bigint() แปลงเป็น bigint แล้ว
-
   try {
+    // 1. ดึง User ID จาก JWT (ใส่ Optional Chaining ป้องกัน payload เป็น undefined)
+    const payload = c.get("jwtPayload") as
+      | { id: string; email: string }
+      | undefined;
+
+    if (!payload?.id) {
+      return c.json({ message: "Unauthorized: Missing user payload" }, 401);
+    }
+
+    const userId = BigInt(payload.id);
+
+    // 2. ดึง walletId จาก Param ที่ผ่าน Zod Validation แล้ว
+    const { id: walletId } = c.req.valid("param");
+
+    // 3. เรียก Service
     const wallet = await WalletService.getWalletById(walletId, userId);
     return c.json(wallet, 200);
   } catch (error: any) {

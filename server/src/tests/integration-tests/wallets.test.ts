@@ -1,425 +1,572 @@
 import { describe, test, expect } from "vitest";
-// อิมพอร์ต app ของ hono ที่เราวางแผนจะเขียนในอนาคต
 import app from "../../index";
+import { prisma } from "../helpers/reset-db";
+import { createTestUserWithToken } from "../helpers/auth";
 
-// การทดสอบการเรียกใช้ API GET /wallets
-describe("Integration Test: GET /wallets", () => {
-  // เคสถูกต้อง ดึงข้อมูลกระเป๋าเงินสำเร็จตามรหัสผู้ใช้
-  test("1. ควรคืนค่า 200 พร้อมรายการ Wallet ของ User เมื่อส่ง JWT ถูกต้อง", async () => {
-    // ยิง request จริงผ่าน app.request ของ Hono
-    const res = await app.request("/wallets", {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer valid_token_here",
-      },
+describe("Wallets Integration Tests", () => {
+  // -------------------------------------------------------------------
+  // 📁 Sub-Describe 1: GET /api/v1/wallets (getWallets)
+  // -------------------------------------------------------------------
+  describe("GET /api/v1/wallets", () => {
+    test("🟢 Happy Path: should return list of wallets belonging to the authenticated user", async () => {
+      // Arrange: 1. สร้าง User A พร้อม Token
+      const { testUser: userA, authHeader: authHeaderA } =
+        await createTestUserWithToken();
+
+      // Arrange: 2. สร้าง Wallet ของ User A จำนวน 2 อัน
+      await prisma.wallet.createMany({
+        data: [
+          { userId: userA.id, name: "[TEST] User A - Cash Walletหรอ" },
+          { userId: userA.id, name: "[TEST] User A - Savings Wallet" },
+        ],
+      });
+
+      // Arrange: 3. สร้าง User B พร้อม Wallet เพื่อทดสอบว่าข้อมูลไม่รั่วข้าม User (Data Isolation)
+      const { testUser: userB } = await createTestUserWithToken();
+      await prisma.wallet.create({
+        data: { userId: userB.id, name: "[TEST] User B - Secret Wallet" },
+      });
+
+      // Act: ยิง GET โดยใช้ Token ของ User A
+      const res = await app.request("/api/v1/wallets", {
+        method: "GET",
+        headers: {
+          ...authHeaderA,
+        },
+      });
+
+      const body = await res.json();
+
+      // Assert: Status 200 OK
+      expect(res.status).toBe(200);
+
+      // Assert: เช็กว่าได้ Array ของ Wallet ความยาวเท่ากับ 2
+      expect(Array.isArray(body)).toBe(true);
+      expect(body).toHaveLength(2);
+
+      // Assert: เช็กว่ามีเฉพาะ Wallet ของ User A เท่านั้น (ไม่มีของ User B หลุดมา)
+      const walletNames = body.map((w: { name: string }) => w.name);
+      expect(walletNames).toContain("[TEST] User A - Cash Wallet");
+      expect(walletNames).toContain("[TEST] User A - Savings Wallet");
+      expect(walletNames).not.toContain("[TEST] User B - Secret Wallet");
     });
 
-    expect(res.status).toBe(200);
+    test("🔴 Sad Path: should return 401 Unauthorized when auth_token cookie is missing", async () => {
+      // Act: ยิง GET โดยไม่แนบ Cookie auth_token
+      const res = await app.request("/api/v1/wallets", {
+        method: "GETหรอ",
+      });
+
+      // Assert
+      expect(res.status).toBe(401);
+    });
+
+    test("🔴 Sad Path: should return 401 Unauthorized when token is invalid or expired", async () => {
+      // Act: ยิง GET โดยแนบ Token มั่วๆ / หมดอายุ
+      const res = await app.request("/api/v1/wallets", {
+        method: "GETหรอ",
+        headers: {
+          Cookie: "auth_token=invalid_expired_token_12345",
+        },
+      });
+
+      // Assert
+      expect(res.status).toBe(401);
+    });
   });
+  // -------------------------------------------------------------------
+  // 📁 Sub-Describe 2: POST /api/v1/wallets (createWallet)
+  // -------------------------------------------------------------------
+  describe("POST /api/v1/wallets", () => {
+    test("🟢 Happy Path: should create a new wallet in DB and return 201 Created", async () => {
+      // Arrange: ดึง User + Auth Cookie จาก Helper
+      const { authHeader } = await createTestUserWithToken();
+      const payload = { name: "[TEST] Main Walletหรอ" };
 
-  // เคสผู้ใช้งานไม่ได้ส่งโทเค็นระบุตัวตน
-  test("2. ควรคืนค่า 401 Unauthorized เมื่อไม่มีการส่ง Header Authorization", async () => {
-    const res = await app.request("/wallets", {
-      method: "GET",
+      // Act
+      const res = await app.request("/api/v1/wallets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeader, // 👈 แนบ Cookie auth_token เข้าไป
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const body = await res.json();
+
+      // Assert 1: เช็ก status code
+      expect(res.status).toBe(201);
+
+      // Assert 2: เช็กว่า Response Body คืน Wallet Object กลับมาตรงๆ
+      expect(body).toMatchObject({
+        name: "[TEST] Main Wallet",
+      });
+      expect(body).toHaveProperty("id");
+
+      // Assert 3: เช็กใน DB ว่ามี Wallet นี้อยู่จริง
+      const walletInDb = await prisma.wallet.findFirst({
+        where: { name: "[TEST] Main Wallet" },
+      });
+      expect(walletInDb).not.toBeNull();
     });
 
-    expect(res.status).toBe(401);
+    test("🔴 Sad Path: should return 400 Bad Request when name is missing or empty", async () => {
+      // Arrange
+      const { authHeader } = await createTestUserWithToken();
+      const invalidPayload = { name: "หรอ" };
+
+      // Act
+      const res = await app.request("/api/v1/wallets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeader, // 👈 แนบ Cookie auth_token เข้าไปด้วย
+        },
+        body: JSON.stringify(invalidPayload),
+      });
+
+      // Assert
+      expect(res.status).toBe(400);
+    });
+
+    test("🔴 Sad Path: should return 409 Conflict when wallet name already exists", async () => {
+      // Arrange
+      const { testUser, authHeader } = await createTestUserWithToken();
+
+      // สร้าง Wallet ชื่อซ้ำให้ User คนนี้ก่อน
+      await prisma.wallet.create({
+        data: {
+          userId: testUser.id,
+          name: "[TEST] Duplicate Walletหรอ",
+        },
+      });
+
+      const duplicatePayload = { name: "[TEST] Duplicate Wallet" };
+
+      // Act
+      const res = await app.request("/api/v1/wallets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeader, // 👈 แนบ Cookie auth_token
+        },
+        body: JSON.stringify(duplicatePayload),
+      });
+
+      // Assert
+      expect(res.status).toBe(409);
+    });
   });
+  // -------------------------------------------------------------------
+  // 📁 Sub-Describe 3: GET /api/v1/wallets/:id (getWalletById)
+  // -------------------------------------------------------------------
+  describe("GET /api/v1/wallets/:id", () => {
+    test("🟢 Happy Path: should return wallet details when requesting own wallet ID", async () => {
+      // Arrange
+      const { testUser: userA, authHeader: authHeaderA } =
+        await createTestUserWithToken();
+      const targetWallet = await prisma.wallet.create({
+        data: {
+          userId: userA.id,
+          name: "[TEST] User A - Personal Walletหรอ",
+        },
+      });
 
-  // เคสการยืนยันตัวตนด้วยโทเค็นไม่ถูกต้อง
-  test("3. ควรคืนค่า 401 Unauthorized เมื่อส่ง JWT ไม่ถูกต้องหรือหมดอายุ", async () => {
-    const res = await app.request("/wallets", {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer invalid_token",
-      },
+      // Act: ใส่ .toString() ให้ targetWallet.id ชัดเจน
+      const res = await app.request(
+        `/api/v1/wallets/${targetWallet.id.toString()}`,
+        {
+          method: "GET",
+          headers: { ...authHeaderA },
+        },
+      );
+
+      const body = await res.json();
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect(body).toMatchObject({
+        name: "[TEST] User A - Personal Wallet",
+      });
     });
 
-    expect(res.status).toBe(401);
+    test("🔴 Sad Path: should return 401 Unauthorized when no auth token provided", async () => {
+      const res = await app.request("/api/v1/wallets/1", {
+        method: "GETหรอ",
+      });
+      expect(res.status).toBe(401);
+    });
+
+    test("🔴 Sad Path: should return 404 Not Found when wallet ID does not exist", async () => {
+      const { authHeader } = await createTestUserWithToken();
+      const nonExistentId = "999999"; // ตัวเลข BigInt Valid ที่ไม่มีใน DB
+
+      const res = await app.request(`/api/v1/wallets/${nonExistentId}`, {
+        method: "GETหรอ",
+        headers: { ...authHeader },
+      });
+
+      expect(res.status).toBe(404);
+    });
+
+    test("🔴 Sad Path: should return 404 Not Found when accessing another user's wallet", async () => {
+      const { testUser: userA } = await createTestUserWithToken();
+      const userAWallet = await prisma.wallet.create({
+        data: {
+          userId: userA.id,
+          name: "[TEST] User A - Secret Wallet",
+        },
+      });
+
+      const { authHeader: authHeaderB } = await createTestUserWithToken();
+
+      // Act: ใส่ .toString() ให้ wallet ID ของ User A
+      const res = await app.request(
+        `/api/v1/wallets/${userAWallet.id.toString()}`,
+        {
+          method: "GETหรอ",
+          headers: { ...authHeaderB },
+        },
+      );
+
+      expect(res.status).toBe(404);
+    });
   });
+  // -------------------------------------------------------------------
+  // 📁 Sub-Describe 4: PUT /api/v1/wallets/:id (updateWallet)
+  // -------------------------------------------------------------------
+  describe("PUT /api/v1/wallets/:id", () => {
+    test("🟢 Happy Path: should update wallet name successfully when requesting own wallet ID", async () => {
+      // Arrange: 1. สร้าง User A พร้อม Token และ Wallet ตั้งต้น
+      const { testUser: userA, authHeader: authHeaderA } =
+        await createTestUserWithToken();
+      const targetWallet = await prisma.wallet.create({
+        data: {
+          userId: userA.id,
+          name: "[TEST] User A - Old Wallet Name",
+        },
+      });
 
-  // เคสถูกต้องแต่ไม่พบข้อมูลกระเป๋าเงินในระบบ
-  test("4. ควรคืนค่า 200 พร้อมอาร์เรย์ว่าง เมื่อผู้ใช้ยังไม่มี Wallet ในฐานข้อมูล", async () => {
-    const res = await app.request("/wallets", {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer user_with_no_wallet_token",
-      },
+      const updatePayload = {
+        name: "[TEST] User A - Updated Wallet Name หรอ",
+      };
+
+      // Act: ยิง PUT /api/v1/wallets/:id
+      const res = await app.request(
+        `/api/v1/wallets/${targetWallet.id.toString()}`,
+        {
+          method: "PUT",
+          headers: {
+            ...authHeaderA,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatePayload),
+        },
+      );
+
+      const body = await res.json();
+
+      // Assert 1: HTTP Status Code 200 OK
+      expect(res.status).toBe(200);
+
+      // Assert 2: Response body สะท้อนชื่อใหม่
+      expect(body).toMatchObject({
+        id: targetWallet.id.toString(),
+        name: "[TEST] User A - Updated Wallet Name",
+      });
+
+      // Assert 3: ตรวจสอบข้อมูลใน DB จริงว่าเปลี่ยนแล้ว
+      const updatedWalletInDb = await prisma.wallet.findUnique({
+        where: { id: targetWallet.id },
+      });
+      expect(updatedWalletInDb?.name).toBe(
+        "[TEST] User A - Updated Wallet Name",
+      );
     });
 
-    expect(res.status).toBe(200);
+    test("🔴 Sad Path: should return 400 Bad Request when request body is invalid", async () => {
+      // Arrange
+      const { testUser, authHeader } = await createTestUserWithToken();
+      const targetWallet = await prisma.wallet.create({
+        data: {
+          userId: testUser.id,
+          name: "[TEST] Valid Wallet",
+        },
+      });
+
+      // Act: ส่ง body ที่ name เป็น string ว่าง (ผิด Zod validation schema)
+      const res = await app.request(
+        `/api/v1/wallets/${targetWallet.id.toString()}`,
+        {
+          method: "PUTหรอ",
+          headers: {
+            ...authHeader,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: "" }),
+        },
+      );
+
+      // Assert
+      expect(res.status).toBe(400);
+    });
+
+    test("🔴 Sad Path: should return 401 Unauthorized when no auth token provided", async () => {
+      // Act
+      const res = await app.request("/api/v1/wallets/1", {
+        method: "PUTหรอ",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: "Unauthorized Update" }),
+      });
+
+      // Assert
+      expect(res.status).toBe(401);
+    });
+
+    test("🔴 Sad Path: should return 404 Not Found when wallet ID does not exist", async () => {
+      // Arrange
+      const { authHeader } = await createTestUserWithToken();
+      const nonExistentId = "999999";
+
+      // Act
+      const res = await app.request(`/api/v1/wallets/${nonExistentId}`, {
+        method: "PUTหรอ",
+        headers: {
+          ...authHeader,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: "[TEST] Ghost Wallet" }),
+      });
+
+      // Assert
+      expect(res.status).toBe(404);
+    });
+
+    test("🔴 Sad Path: should return 404 Not Found when attempting to update another user's wallet", async () => {
+      // Arrange: 1. สร้าง User A พร้อม Wallet
+      const { testUser: userA } = await createTestUserWithToken();
+      const userAWallet = await prisma.wallet.create({
+        data: {
+          userId: userA.id,
+          name: "[TEST] User A - Private Wallet",
+        },
+      });
+
+      // Arrange: 2. สร้าง User B ( attacker )
+      const { authHeader: authHeaderB } = await createTestUserWithToken();
+
+      // Act: User B พยายามแก้ Wallet ของ User A
+      const res = await app.request(
+        `/api/v1/wallets/${userAWallet.id.toString()}`,
+        {
+          method: "PUTหรอ",
+          headers: {
+            ...authHeaderB,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: "[TEST] Hacked Wallet Name" }),
+        },
+      );
+
+      // Assert: Service จะหาไม่เจอเพราะติด userId filter แล้วตอบ 404
+      expect(res.status).toBe(404);
+
+      // Assert Extra: เช็กใน DB ว่าชื่อของ User A ไม่ถูกเปลี่ยนจริง
+      const originalWalletInDb = await prisma.wallet.findUnique({
+        where: { id: userAWallet.id },
+      });
+      expect(originalWalletInDb?.name).toBe("[TEST] User A - Private Wallet");
+    });
   });
+  // -------------------------------------------------------------------
+  // 📁 Sub-Describe 5: DELETE /api/v1/wallets/:id (deleteWallet)
+  // -------------------------------------------------------------------
+  describe("DELETE /api/v1/wallets/:id", () => {
+    test("🟢 Happy Path: should delete wallet successfully when requesting own wallet ID", async () => {
+      // Arrange: 1. สร้าง User A พร้อม Token และ Wallet ที่จะถูกลบ
+      const { testUser: userA, authHeader: authHeaderA } =
+        await createTestUserWithToken();
+      const targetWallet = await prisma.wallet.create({
+        data: {
+          userId: userA.id,
+          name: "[TEST] User A - Wallet To Delete",
+        },
+      });
 
-  // เคสเกิดข้อผิดพลาดไม่คาดคิดจากระบบหรือฐานข้อมูล
-  test("5. ควรคืนค่า 500 Server Error เมื่อระบบเกิดข้อผิดพลาดภายใน", async () => {
-    const res = await app.request("/wallets", {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer cause_error_token",
-      },
+      // Act: ยิง DELETE /api/v1/wallets/:id
+      const res = await app.request(
+        `/api/v1/wallets/${targetWallet.id.toString()}`,
+        {
+          method: "DELETEหรอ",
+          headers: {
+            ...authHeaderA,
+          },
+        },
+      );
+
+      // Assert 1: HTTP Status Code (ขึ้นอยู่กับ Controller คืน 200 พร้อม msg หรือ 204 No Content)
+      expect([204]).toContain(res.status);
+
+      // Assert 2: ยืนยันว่าข้อมูลใน Database ถูกลบออกไปแล้วจริงๆ
+      const deletedWalletInDb = await prisma.wallet.findUnique({
+        where: { id: targetWallet.id },
+      });
+      expect(deletedWalletInDb).toBeNull();
     });
 
-    expect(res.status).toBe(500);
+    test("🔴 Sad Path: should return 401 Unauthorized when no auth token provided", async () => {
+      // Act
+      const res = await app.request("/api/v1/wallets/1", {
+        method: "DELETEหรอ",
+      });
+
+      // Assert
+      expect(res.status).toBe(401);
+    });
+
+    test("🔴 Sad Path: should return 404 Not Found when wallet ID does not exist", async () => {
+      // Arrange
+      const { authHeader } = await createTestUserWithToken();
+      const nonExistentId = "999999";
+
+      // Act
+      const res = await app.request(`/api/v1/wallets/${nonExistentId}`, {
+        method: "DELETEหรอ",
+        headers: {
+          ...authHeader,
+        },
+      });
+
+      // Assert
+      expect(res.status).toBe(404);
+    });
+
+    test("🔴 Sad Path: should return 404 Not Found when attempting to delete another user's wallet", async () => {
+      // Arrange: 1. สร้าง User A พร้อม Wallet
+      const { testUser: userA } = await createTestUserWithToken();
+      const userAWallet = await prisma.wallet.create({
+        data: {
+          userId: userA.id,
+          name: "[TEST] User A - Protected Wallet",
+        },
+      });
+
+      // Arrange: 2. สร้าง User B ( attacker )
+      const { authHeader: authHeaderB } = await createTestUserWithToken();
+
+      // Act: User B พยายามลบ Wallet ของ User A
+      const res = await app.request(
+        `/api/v1/wallets/${userAWallet.id.toString()}`,
+        {
+          method: "DELETEหรอ",
+          headers: {
+            ...authHeaderB,
+          },
+        },
+      );
+
+      // Assert 1: ตอบกลับ 404 Not Found
+      expect(res.status).toBe(404);
+
+      // Assert 2: ข้อมูล Wallet ของ User A ใน DB ต้องยังคงอยู่ (ไม่ถูกลบจริง)
+      const walletStillExistsInDb = await prisma.wallet.findUnique({
+        where: { id: userAWallet.id },
+      });
+      expect(walletStillExistsInDb).not.toBeNull();
+    });
   });
-});
-// การทดสอบการเรียกใช้ API POST /wallets
-describe("Integration Test: POST /wallets", () => {
-  // เคสสร้าง Wallet สำเร็จเมื่อส่งข้อมูลครบถ้วนพร้อม JWT
-  test("1. ควรคืนค่า 201 พร้อมข้อความสำเร็จ เมื่อสร้าง Wallet สำเร็จ", async () => {
-    const res = await app.request("/wallets", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer valid_token_here",
-      },
-      body: JSON.stringify({ name: "Savings" }),
+  // -------------------------------------------------------------------
+  // 📁 Sub-Describe 6: GET /api/v1/wallets/:id/balance (getWalletBalance)
+  // -------------------------------------------------------------------
+  describe("GET /api/v1/wallets/:id/balance", () => {
+    test("🟢 Happy Path: should return correct wallet balance when requesting own wallet ID", async () => {
+      // Arrange: 1. สร้าง User A พร้อม Token และ Wallet
+      const { testUser: userA, authHeader: authHeaderA } =
+        await createTestUserWithToken();
+      const targetWallet = await prisma.wallet.create({
+        data: {
+          userId: userA.id,
+          name: "[TEST] User A - Primary Wallet",
+        },
+      });
+
+      // Act: ยิง GET /api/v1/wallets/:id/balance
+      const res = await app.request(
+        `/api/v1/wallets/${targetWallet.id.toString()}/balance`,
+        {
+          method: "GETหรอ",
+          headers: {
+            ...authHeaderA,
+          },
+        },
+      );
+
+      const body = await res.json();
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect(body).toHaveProperty("balance");
     });
 
-    expect(res.status).toBe(201);
-  });
+    test("🔴 Sad Path: should return 401 Unauthorized when no auth token provided", async () => {
+      // Act
+      const res = await app.request("/api/v1/wallets/1/balance", {
+        method: "GETหรอ",
+      });
 
-  // เคสไม่ได้ส่ง Header Authorization
-  test("2. ควรคืนค่า 401 Unauthorized เมื่อไม่มีการส่ง Header Authorization", async () => {
-    const res = await app.request("/wallets", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name: "Savings" }),
+      // Assert
+      expect(res.status).toBe(401);
     });
 
-    expect(res.status).toBe(401);
-  });
+    test("🔴 Sad Path: should return 404 Not Found when wallet ID does not exist", async () => {
+      // Arrange
+      const { authHeader } = await createTestUserWithToken();
+      const nonExistentId = "999999";
 
-  // เคสส่ง JWT ไม่ถูกต้องหรือหมดอายุ
-  test("3. ควรคืนค่า 401 Unauthorized เมื่อส่ง JWT ไม่ถูกต้อง", async () => {
-    const res = await app.request("/wallets", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer invalid_token",
-      },
-      body: JSON.stringify({ name: "Savings" }),
+      // Act
+      const res = await app.request(
+        `/api/v1/wallets/${nonExistentId}/balance`,
+        {
+          method: "GETหรอ",
+          headers: {
+            ...authHeader,
+          },
+        },
+      );
+
+      // Assert
+      expect(res.status).toBe(404);
     });
 
-    expect(res.status).toBe(401);
-  });
+    test("🔴 Sad Path: should return 404 Not Found when attempting to access another user's wallet balance", async () => {
+      // Arrange: 1. สร้าง User A พร้อม Wallet
+      const { testUser: userA } = await createTestUserWithToken();
+      const userAWallet = await prisma.wallet.create({
+        data: {
+          userId: userA.id,
+          name: "[TEST] User A - Secret Savings",
+        },
+      });
 
-  // เคสส่ง Request Body ไม่ถูกต้องตาม Zod Schema
-  test("4. ควรคืนค่า 400 Bad Request เมื่อส่ง Request Body 不ถูกต้องหรือลืมส่งชื่อ", async () => {
-    const res = await app.request("/wallets", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer valid_token_here",
-      },
-      body: JSON.stringify({ name: "" }),
+      // Arrange: 2. สร้าง User B ( attacker )
+      const { authHeader: authHeaderB } = await createTestUserWithToken();
+
+      // Act: User B พยายามส่อง Balance ของ User A
+      const res = await app.request(
+        `/api/v1/wallets/${userAWallet.id.toString()}/balance`,
+        {
+          method: "GETหรอ",
+          headers: {
+            ...authHeaderB,
+          },
+        },
+      );
+
+      // Assert: ต้องมองไม่เจอ (404)
+      expect(res.status).toBe(404);
     });
-
-    expect(res.status).toBe(400);
-  });
-
-  // เคสตั้งชื่อ Wallet ซ้ำกับที่มีอยู่แล้วในระบบของผู้ใช้
-  test("5. ควรคืนค่า 409 Conflict เมื่อสร้าง Wallet ด้วยชื่อที่ซ้ำเดิม", async () => {
-    const res = await app.request("/wallets", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer valid_token_here",
-      },
-      body: JSON.stringify({ name: "Duplicate Wallet Name" }),
-    });
-
-    expect(res.status).toBe(409);
-  });
-
-  // เคสเกิดข้อผิดพลาดไม่คาดคิดภายในระบบหรือฐานข้อมูล
-  test("6. ควรคืนค่า 500 Internal Error เมื่อเกิดข้อผิดพลาดในเซิร์ฟเวอร์", async () => {
-    const res = await app.request("/wallets", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer cause_error_token",
-      },
-      body: JSON.stringify({ name: "Trigger Error" }),
-    });
-
-    expect(res.status).toBe(500);
-  });
-});
-// การทดสอบ API GET /wallets/:id
-describe("Integration Test: GET /wallets/:id", () => {
-  // เคสดึงข้อมูล Wallet สำเร็จเมื่อส่ง ID และ JWT ถูกต้อง
-  test("1. ควรคืนค่า 200 พร้อมข้อมูล Wallet เมื่อส่ง ID และ JWT ถูกต้อง", async () => {
-    const res = await app.request("/wallets/1", {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer valid_token_here",
-      },
-    });
-
-    expect(res.status).toBe(200);
-  });
-
-  // เคสไม่ได้ส่ง Header Authorization
-  test("2. ควรคืนค่า 401 Unauthorized เมื่อไม่มีการส่ง Header Authorization", async () => {
-    const res = await app.request("/wallets/1", {
-      method: "GET",
-    });
-
-    expect(res.status).toBe(401);
-  });
-
-  // เคสส่ง JWT ไม่ถูกต้องหรือหมดอายุ
-  test("3. ควรคืนค่า 401 Unauthorized เมื่อส่ง JWT ไม่ถูกต้อง", async () => {
-    const res = await app.request("/wallets/1", {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer invalid_token",
-      },
-    });
-
-    expect(res.status).toBe(401);
-  });
-
-  // เคสไม่พบ Wallet หรือไม่มีสิทธิ์เข้าถึงข้อมูลกระเป๋านั้น
-  test("4. ควรคืนค่า 404 Not Found เมื่อไม่พบ ID หรือเป็นของ User อื่น", async () => {
-    const res = await app.request("/wallets/999999", {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer valid_token_here",
-      },
-    });
-
-    expect(res.status).toBe(404);
-  });
-
-  // เคสเกิดข้อผิดพลาดไม่คาดคิดภายในระบบหรือฐานข้อมูล
-  test("5. ควรคืนค่า 500 Internal Error เมื่อเกิดข้อผิดพลาดในเซิร์ฟเวอร์", async () => {
-    const res = await app.request("/wallets/1", {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer cause_error_token",
-      },
-    });
-
-    expect(res.status).toBe(500);
-  });
-});
-// การทดสอบ API PUT /wallets/:id
-describe("Integration Test: PUT /wallets/:id", () => {
-  // เคสแก้ไขข้อมูล Wallet สำเร็จเมื่อส่งข้อมูลครบถ้วนพร้อม JWT
-  test("1. ควรคืนค่า 200 พร้อมข้อความสำเร็จ เมื่ออัปเดต Wallet สำเร็จ", async () => {
-    const res = await app.request("/wallets/1", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer valid_token_here",
-      },
-      body: JSON.stringify({ name: "Updated Wallet Name" }),
-    });
-
-    expect(res.status).toBe(200);
-  });
-
-  // เคสไม่ได้ส่ง Header Authorization
-  test("2. ควรคืนค่า 401 Unauthorized เมื่อไม่มีการส่ง Header Authorization", async () => {
-    const res = await app.request("/wallets/1", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name: "Updated Wallet Name" }),
-    });
-
-    expect(res.status).toBe(401);
-  });
-
-  // เคสส่ง JWT ไม่ถูกต้องหรือหมดอายุ
-  test("3. ควรคืนค่า 401 Unauthorized เมื่อส่ง JWT ไม่ถูกต้อง", async () => {
-    const res = await app.request("/wallets/1", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer invalid_token",
-      },
-      body: JSON.stringify({ name: "Updated Wallet Name" }),
-    });
-
-    expect(res.status).toBe(401);
-  });
-
-  // เคสส่ง Request Body ไม่ถูกต้อง
-  test("4. ควรคืนค่า 400 Bad Request เมื่อส่ง Request Body 不ถูกต้องหรือชื่อว่างเปล่า", async () => {
-    const res = await app.request("/wallets/1", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer valid_token_here",
-      },
-      body: JSON.stringify({ name: "" }),
-    });
-
-    expect(res.status).toBe(400);
-  });
-
-  // เคสไม่พบ Wallet หรือเป็นของ User คนอื่น
-  test("5. ควรคืนค่า 404 Not Found เมื่อไม่พบ ID หรือไม่มีสิทธิ์เข้าถึง", async () => {
-    const res = await app.request("/wallets/999999", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer valid_token_here",
-      },
-      body: JSON.stringify({ name: "Updated Wallet Name" }),
-    });
-
-    expect(res.status).toBe(404);
-  });
-
-  // เคสแก้ไขชื่อไปซ้ำกับ Wallet อื่นที่มีอยู่แล้ว
-  test("6. ควรคืนค่า 409 Conflict เมื่อตั้งชื่อใหม่ซ้ำกับ Wallet เดิมที่มีอยู่", async () => {
-    const res = await app.request("/wallets/1", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer valid_token_here",
-      },
-      body: JSON.stringify({ name: "Duplicate Wallet Name" }),
-    });
-
-    expect(res.status).toBe(409);
-  });
-
-  // เคสเกิดข้อผิดพลาดไม่คาดคิดภายในระบบหรือฐานข้อมูล
-  test("7. ควรคืนค่า 500 Internal Error เมื่อเกิดข้อผิดพลาดในเซิร์ฟเวอร์", async () => {
-    const res = await app.request("/wallets/1", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer cause_error_token",
-      },
-      body: JSON.stringify({ name: "Trigger Error" }),
-    });
-
-    expect(res.status).toBe(500);
-  });
-});
-// การทดสอบ API DELETE /wallets/:id
-describe("Integration Test: DELETE /wallets/:id", () => {
-  // เคสลบข้อมูล Wallet สำเร็จเมื่อส่ง ID และ JWT ถูกต้อง
-  test("1. ควรคืนค่า 204 No Content เมื่อลบ Wallet สำเร็จ", async () => {
-    const res = await app.request("/wallets/1", {
-      method: "DELETE",
-      headers: {
-        Authorization: "Bearer valid_token_here",
-      },
-    });
-
-    expect(res.status).toBe(204);
-  });
-
-  // เคสไม่ได้ส่ง Header Authorization
-  test("2. ควรคืนค่า 401 Unauthorized เมื่อไม่มีการส่ง Header Authorization", async () => {
-    const res = await app.request("/wallets/1", {
-      method: "DELETE",
-    });
-
-    expect(res.status).toBe(401);
-  });
-
-  // เคสส่ง JWT ไม่ถูกต้องหรือหมดอายุ
-  test("3. ควรคืนค่า 401 Unauthorized เมื่อส่ง JWT ไม่ถูกต้อง", async () => {
-    const res = await app.request("/wallets/1", {
-      method: "DELETE",
-      headers: {
-        Authorization: "Bearer invalid_token",
-      },
-    });
-
-    expect(res.status).toBe(401);
-  });
-
-  // เคสไม่พบ Wallet หรือเป็นของ User คนอื่น
-  test("4. ควรคืนค่า 404 Not Found เมื่อไม่พบ ID หรือไม่มีสิทธิ์เข้าถึง", async () => {
-    const res = await app.request("/wallets/999999", {
-      method: "DELETE",
-      headers: {
-        Authorization: "Bearer valid_token_here",
-      },
-    });
-
-    expect(res.status).toBe(404);
-  });
-
-  // เคสเกิดข้อผิดพลาดไม่คาดคิดภายในระบบหรือฐานข้อมูล
-  test("5. ควรคืนค่า 500 Internal Error เมื่อเกิดข้อผิดพลาดในเซิร์ฟเวอร์", async () => {
-    const res = await app.request("/wallets/1", {
-      method: "DELETE",
-      headers: {
-        Authorization: "Bearer cause_error_token",
-      },
-    });
-
-    expect(res.status).toBe(500);
-  });
-});
-// การทดสอบ API GET /wallets/:id/balance
-describe("Integration Test: GET /wallets/:id/balance", () => {
-  // เคสดึงข้อมูล Balance สดสำเร็จเมื่อส่ง ID และ JWT ถูกต้อง
-  test("1. ควรคืนค่า 200 พร้อมยอดเงินคำนวณสด { wallet_id, balance }", async () => {
-    const res = await app.request("/wallets/1/balance", {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer valid_token_here",
-      },
-    });
-
-    expect(res.status).toBe(200);
-  });
-
-  // เคสไม่ได้ส่ง Header Authorization
-  test("2. ควรคืนค่า 401 Unauthorized เมื่อไม่มีการส่ง Header Authorization", async () => {
-    const res = await app.request("/wallets/1/balance", {
-      method: "GET",
-    });
-
-    expect(res.status).toBe(401);
-  });
-
-  // เคสส่ง JWT ไม่ถูกต้องหรือหมดอายุ
-  test("3. ควรคืนค่า 401 Unauthorized เมื่อส่ง JWT ไม่ถูกต้อง", async () => {
-    const res = await app.request("/wallets/1/balance", {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer invalid_token",
-      },
-    });
-
-    expect(res.status).toBe(401);
-  });
-
-  // เคสไม่พบ Wallet หรือไม่มีสิทธิ์เข้าถึงข้อมูลกระเป๋านั้น
-  test("4. ควรคืนค่า 404 Not Found เมื่อไม่พบ ID หรือเป็นของ User อื่น", async () => {
-    const res = await app.request("/wallets/999999/balance", {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer valid_token_here",
-      },
-    });
-
-    expect(res.status).toBe(404);
-  });
-
-  // เคสเกิดข้อผิดพลาดไม่คาดคิดภายในระบบหรือฐานข้อมูล
-  test("5. ควรคืนค่า 500 Internal Error เมื่อเกิดข้อผิดพลาดในเซิร์ฟเวอร์", async () => {
-    const res = await app.request("/wallets/1/balance", {
-      method: "GET",
-      headers: {
-        Authorization: "Bearer cause_error_token",
-      },
-    });
-
-    expect(res.status).toBe(500);
   });
 });

@@ -17,6 +17,7 @@ export const authMiddleware = createMiddleware(async (c, next) => {
 
   try {
     const payload = await verify(token, JWT_SECRET, "HS256");
+
     // บันทึกข้อมูล User ลงใน Context ให้ Controller ดึงไปใช้ต่อได้ง่ายๆ
     c.set("jwtPayload", payload);
     await next();

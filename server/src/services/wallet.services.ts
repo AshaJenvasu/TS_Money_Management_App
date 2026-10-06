@@ -137,7 +137,12 @@ export class WalletService {
 
       // 2. สั่งลบ Wallet ในฐานข้อมูล
       await WalletRepository.delete(walletId);
-      return true;
+      return {
+        id: wallet.id.toString(),
+        name: wallet.name,
+        createdAt: wallet.createdAt.toISOString(),
+        updatedAt: wallet.updatedAt.toISOString(),
+      };
     } catch (error: any) {
       // โยน Error ต่อให้ Controller จัดการแยกแยะ HTTP Status
       if (error.message === "WALLET_NOT_FOUND") {
