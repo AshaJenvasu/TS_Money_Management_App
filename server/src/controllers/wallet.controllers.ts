@@ -220,7 +220,7 @@ export const getWalletBalanceRoute = createRoute({
 });
 
 // บังคับให้ทุก Route ใต้ /api/v1/wallets ต้องผ่าน Authentication
-walletController.use("*", authMiddleware);
+walletController.use("/api/v1/wallets/*", authMiddleware);
 
 // 1. Controller: getWalletsRoute
 walletController.openapi(getWalletsRoute, async (c) => {
