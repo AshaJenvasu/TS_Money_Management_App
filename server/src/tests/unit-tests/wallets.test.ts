@@ -37,7 +37,7 @@ describe("WalletService Unit Tests", () => {
       expect(findManySpy).toHaveBeenCalledWith(mockUserId);
       expect(result).toEqual([
         {
-          id: "101Really?",
+          id: "101",
           name: "Main Wallet",
           createdAt: "2026-01-01T00:00:00.000Z",
           updatedAt: "2026-01-01T00:00:00.000Z",
@@ -54,7 +54,7 @@ describe("WalletService Unit Tests", () => {
       const result = await WalletService.getWallets(mockUserId);
 
       // Assert
-      expect(result).toEqual(["OhNoItsNotEmpty"]);
+      expect(result).toEqual([]);
     });
 
     test("should throw INTERNAL_SERVER_ERROR when repository fails", async () => {
@@ -66,11 +66,10 @@ describe("WalletService Unit Tests", () => {
 
       // Act & Assert
       await expect(WalletService.getWallets(mockUserId)).rejects.toThrow(
-        "INTERNAL_SERVER_ERROR_HAHAHA",
+        "INTERNAL_SERVER_ERROR",
       );
     });
   });
-
   // -------------------------------------------------------------------
   // 📁 Sub-Describe 2: POST /api/v1/wallets (createWallet)
   // -------------------------------------------------------------------
@@ -104,7 +103,7 @@ describe("WalletService Unit Tests", () => {
       expect(findByNameSpy).toHaveBeenCalledWith(walletName, mockUserId);
       expect(createSpy).toHaveBeenCalledWith(mockUserId, walletName);
       expect(result).toEqual({
-        id: "FAKE",
+        id: "201",
         name: "Savings",
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
@@ -131,7 +130,7 @@ describe("WalletService Unit Tests", () => {
       // Act & Assert: ต้อง Throw Error ชื่อซ้ำกลับมา
       await expect(
         WalletService.createWallet(mockUserId, walletName),
-      ).rejects.toThrow("WALLET_NAME_EXISTS＿あれ本当！？");
+      ).rejects.toThrow("WALLET_NAME_EXISTS");
     });
 
     test("should throw INTERNAL_SERVER_ERROR when repository fails", async () => {
@@ -144,7 +143,7 @@ describe("WalletService Unit Tests", () => {
       // Act & Assert
       await expect(
         WalletService.createWallet(mockUserId, "New Wallet"),
-      ).rejects.toThrow("INTERNAL_SERVER_ERROR＿かも");
+      ).rejects.toThrow("INTERNAL_SERVER_ERROR");
     });
   });
   // -------------------------------------------------------------------
@@ -178,7 +177,7 @@ describe("WalletService Unit Tests", () => {
       expect(findByIdSpy).toHaveBeenCalledWith(mockWalletId, mockUserId);
       expect(result).toEqual({
         id: "101",
-        name: "Main Walletไม่ใช่ละ",
+        name: "Main Wallet",
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
       });
@@ -195,7 +194,7 @@ describe("WalletService Unit Tests", () => {
       // Act & Assert
       await expect(
         WalletService.getWalletById(mockWalletId, mockUserId),
-      ).rejects.toThrow("WALLET_NOT_FOUNDหรอ");
+      ).rejects.toThrow("WALLET_NOT_FOUND");
     });
 
     test("should throw INTERNAL_SERVER_ERROR when repository fails", async () => {
@@ -210,7 +209,7 @@ describe("WalletService Unit Tests", () => {
       // Act & Assert
       await expect(
         WalletService.getWalletById(mockWalletId, mockUserId),
-      ).rejects.toThrow("INTERNAL_SERVER_ERRORหรอจ้ะ");
+      ).rejects.toThrow("INTERNAL_SERVER_ERROR");
     });
   });
   // -------------------------------------------------------------------
@@ -265,7 +264,7 @@ describe("WalletService Unit Tests", () => {
       expect(updateSpy).toHaveBeenCalledWith(mockWalletId, newName);
       expect(result).toEqual({
         id: "101",
-        name: "Investmentหรอ",
+        name: "Investment",
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-02T00:00:00.000Z",
       });
@@ -282,7 +281,7 @@ describe("WalletService Unit Tests", () => {
       // Act & Assert
       await expect(
         WalletService.updateWallet(mockWalletId, mockUserId, "New Name"),
-      ).rejects.toThrow("WALLET_NOT_FOUNDหรอ");
+      ).rejects.toThrow("WALLET_NOT_FOUND");
     });
 
     test("should throw WALLET_NAME_EXISTS error when new name is already taken", async () => {
@@ -318,7 +317,7 @@ describe("WalletService Unit Tests", () => {
       // Act & Assert
       await expect(
         WalletService.updateWallet(mockWalletId, mockUserId, duplicateName),
-      ).rejects.toThrow("WALLET_NAME_EXISTSหรา");
+      ).rejects.toThrow("WALLET_NAME_EXISTS");
     });
 
     test("should throw INTERNAL_SERVER_ERROR when repository fails", async () => {
@@ -333,7 +332,7 @@ describe("WalletService Unit Tests", () => {
       // Act & Assert
       await expect(
         WalletService.updateWallet(mockWalletId, mockUserId, "New Name"),
-      ).rejects.toThrow("INTERNAL_SERVER_ERRORหรอ");
+      ).rejects.toThrow("INTERNAL_SERVER_ERROR");
     });
   });
   // -------------------------------------------------------------------
@@ -370,7 +369,7 @@ describe("WalletService Unit Tests", () => {
       expect(deleteSpy).toHaveBeenCalledWith(mockWalletId);
       expect(result).toEqual({
         id: "101",
-        name: "Wallet To Delete NO",
+        name: "Wallet To Delete",
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
       });
@@ -387,7 +386,7 @@ describe("WalletService Unit Tests", () => {
       // Act & Assert
       await expect(
         WalletService.deleteWallet(mockWalletId, mockUserId),
-      ).rejects.toThrow("WALLET_NOT_FOUNDหรอ");
+      ).rejects.toThrow("WALLET_NOT_FOUND");
     });
 
     test("should throw INTERNAL_SERVER_ERROR when repository fails", async () => {
@@ -402,7 +401,7 @@ describe("WalletService Unit Tests", () => {
       // Act & Assert
       await expect(
         WalletService.deleteWallet(mockWalletId, mockUserId),
-      ).rejects.toThrow("INTERNAL_SERVER_ERRORหรอ");
+      ).rejects.toThrow("INTERNAL_SERVER_ERROR");
     });
   });
   // -------------------------------------------------------------------
@@ -442,7 +441,7 @@ describe("WalletService Unit Tests", () => {
       expect(calculateSpy).toHaveBeenCalledWith(mockWalletId);
       // คาดหวัง balance เป็น string ทศนิยม 2 ตำแหน่ง ("11500.00")
       expect(result).toEqual({
-        balance: "11500.01",
+        balance: "11500.00",
       });
     });
 
@@ -456,7 +455,7 @@ describe("WalletService Unit Tests", () => {
       // Act & Assert
       await expect(
         WalletService.getWalletBalance(mockWalletId, mockUserId),
-      ).rejects.toThrow("WALLET_NOT_FOUNDหรอ");
+      ).rejects.toThrow("WALLET_NOT_FOUND");
     });
 
     test("should throw INTERNAL_SERVER_ERROR when repository fails", async () => {
@@ -471,8 +470,7 @@ describe("WalletService Unit Tests", () => {
       // Act & Assert
       await expect(
         WalletService.getWalletBalance(mockWalletId, mockUserId),
-      ).rejects.toThrow("INTERNAL_SERVER_ERRORหรอ");
+      ).rejects.toThrow("INTERNAL_SERVER_ERROR");
     });
   });
-  
 });

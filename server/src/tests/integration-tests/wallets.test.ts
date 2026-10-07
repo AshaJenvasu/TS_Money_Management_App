@@ -16,7 +16,7 @@ describe("Wallets Integration Tests", () => {
       // Arrange: 2. สร้าง Wallet ของ User A จำนวน 2 อัน
       await prisma.wallet.createMany({
         data: [
-          { userId: userA.id, name: "[TEST] User A - Cash Walletหรอ" },
+          { userId: userA.id, name: "[TEST] User A - Cash Wallet" },
           { userId: userA.id, name: "[TEST] User A - Savings Wallet" },
         ],
       });
@@ -54,7 +54,7 @@ describe("Wallets Integration Tests", () => {
     test("🔴 Sad Path: should return 401 Unauthorized when auth_token cookie is missing", async () => {
       // Act: ยิง GET โดยไม่แนบ Cookie auth_token
       const res = await app.request("/api/v1/wallets", {
-        method: "GETหรอ",
+        method: "GET",
       });
 
       // Assert
@@ -64,7 +64,7 @@ describe("Wallets Integration Tests", () => {
     test("🔴 Sad Path: should return 401 Unauthorized when token is invalid or expired", async () => {
       // Act: ยิง GET โดยแนบ Token มั่วๆ / หมดอายุ
       const res = await app.request("/api/v1/wallets", {
-        method: "GETหรอ",
+        method: "GET",
         headers: {
           Cookie: "auth_token=invalid_expired_token_12345",
         },
@@ -81,7 +81,7 @@ describe("Wallets Integration Tests", () => {
     test("🟢 Happy Path: should create a new wallet in DB and return 201 Created", async () => {
       // Arrange: ดึง User + Auth Cookie จาก Helper
       const { authHeader } = await createTestUserWithToken();
-      const payload = { name: "[TEST] Main Walletหรอ" };
+      const payload = { name: "[TEST] Main Wallet" };
 
       // Act
       const res = await app.request("/api/v1/wallets", {
@@ -114,7 +114,7 @@ describe("Wallets Integration Tests", () => {
     test("🔴 Sad Path: should return 400 Bad Request when name is missing or empty", async () => {
       // Arrange
       const { authHeader } = await createTestUserWithToken();
-      const invalidPayload = { name: "หรอ" };
+      const invalidPayload = { name: "" };
 
       // Act
       const res = await app.request("/api/v1/wallets", {
@@ -138,7 +138,7 @@ describe("Wallets Integration Tests", () => {
       await prisma.wallet.create({
         data: {
           userId: testUser.id,
-          name: "[TEST] Duplicate Walletหรอ",
+          name: "[TEST] Duplicate Wallet",
         },
       });
 
@@ -169,7 +169,7 @@ describe("Wallets Integration Tests", () => {
       const targetWallet = await prisma.wallet.create({
         data: {
           userId: userA.id,
-          name: "[TEST] User A - Personal Walletหรอ",
+          name: "[TEST] User A - Personal Wallet",
         },
       });
 
@@ -193,7 +193,7 @@ describe("Wallets Integration Tests", () => {
 
     test("🔴 Sad Path: should return 401 Unauthorized when no auth token provided", async () => {
       const res = await app.request("/api/v1/wallets/1", {
-        method: "GETหรอ",
+        method: "GET",
       });
       expect(res.status).toBe(401);
     });
@@ -203,7 +203,7 @@ describe("Wallets Integration Tests", () => {
       const nonExistentId = "999999"; // ตัวเลข BigInt Valid ที่ไม่มีใน DB
 
       const res = await app.request(`/api/v1/wallets/${nonExistentId}`, {
-        method: "GETหรอ",
+        method: "GET",
         headers: { ...authHeader },
       });
 
@@ -225,7 +225,7 @@ describe("Wallets Integration Tests", () => {
       const res = await app.request(
         `/api/v1/wallets/${userAWallet.id.toString()}`,
         {
-          method: "GETหรอ",
+          method: "GET",
           headers: { ...authHeaderB },
         },
       );
@@ -249,7 +249,7 @@ describe("Wallets Integration Tests", () => {
       });
 
       const updatePayload = {
-        name: "[TEST] User A - Updated Wallet Name หรอ",
+        name: "[TEST] User A - Updated Wallet Name",
       };
 
       // Act: ยิง PUT /api/v1/wallets/:id
@@ -299,7 +299,7 @@ describe("Wallets Integration Tests", () => {
       const res = await app.request(
         `/api/v1/wallets/${targetWallet.id.toString()}`,
         {
-          method: "PUTหรอ",
+          method: "PUT",
           headers: {
             ...authHeader,
             "Content-Type": "application/json",
@@ -315,7 +315,7 @@ describe("Wallets Integration Tests", () => {
     test("🔴 Sad Path: should return 401 Unauthorized when no auth token provided", async () => {
       // Act
       const res = await app.request("/api/v1/wallets/1", {
-        method: "PUTหรอ",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
@@ -333,7 +333,7 @@ describe("Wallets Integration Tests", () => {
 
       // Act
       const res = await app.request(`/api/v1/wallets/${nonExistentId}`, {
-        method: "PUTหรอ",
+        method: "PUT",
         headers: {
           ...authHeader,
           "Content-Type": "application/json",
@@ -362,7 +362,7 @@ describe("Wallets Integration Tests", () => {
       const res = await app.request(
         `/api/v1/wallets/${userAWallet.id.toString()}`,
         {
-          method: "PUTหรอ",
+          method: "PUT",
           headers: {
             ...authHeaderB,
             "Content-Type": "application/json",
@@ -400,7 +400,7 @@ describe("Wallets Integration Tests", () => {
       const res = await app.request(
         `/api/v1/wallets/${targetWallet.id.toString()}`,
         {
-          method: "DELETEหรอ",
+          method: "DELETE",
           headers: {
             ...authHeaderA,
           },
@@ -420,7 +420,7 @@ describe("Wallets Integration Tests", () => {
     test("🔴 Sad Path: should return 401 Unauthorized when no auth token provided", async () => {
       // Act
       const res = await app.request("/api/v1/wallets/1", {
-        method: "DELETEหรอ",
+        method: "DELETE",
       });
 
       // Assert
@@ -434,7 +434,7 @@ describe("Wallets Integration Tests", () => {
 
       // Act
       const res = await app.request(`/api/v1/wallets/${nonExistentId}`, {
-        method: "DELETEหรอ",
+        method: "DELETE",
         headers: {
           ...authHeader,
         },
@@ -461,7 +461,7 @@ describe("Wallets Integration Tests", () => {
       const res = await app.request(
         `/api/v1/wallets/${userAWallet.id.toString()}`,
         {
-          method: "DELETEหรอ",
+          method: "DELETE",
           headers: {
             ...authHeaderB,
           },
@@ -497,7 +497,7 @@ describe("Wallets Integration Tests", () => {
       const res = await app.request(
         `/api/v1/wallets/${targetWallet.id.toString()}/balance`,
         {
-          method: "GETหรอ",
+          method: "GET",
           headers: {
             ...authHeaderA,
           },
@@ -514,7 +514,7 @@ describe("Wallets Integration Tests", () => {
     test("🔴 Sad Path: should return 401 Unauthorized when no auth token provided", async () => {
       // Act
       const res = await app.request("/api/v1/wallets/1/balance", {
-        method: "GETหรอ",
+        method: "GET",
       });
 
       // Assert
@@ -530,7 +530,7 @@ describe("Wallets Integration Tests", () => {
       const res = await app.request(
         `/api/v1/wallets/${nonExistentId}/balance`,
         {
-          method: "GETหรอ",
+          method: "GET",
           headers: {
             ...authHeader,
           },
@@ -558,7 +558,7 @@ describe("Wallets Integration Tests", () => {
       const res = await app.request(
         `/api/v1/wallets/${userAWallet.id.toString()}/balance`,
         {
-          method: "GETหรอ",
+          method: "GET",
           headers: {
             ...authHeaderB,
           },
