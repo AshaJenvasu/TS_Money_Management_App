@@ -1,4 +1,6 @@
 import { prisma } from "../config/prisma";
+import { Prisma } from "@prisma/client";
+
 
 export class UserRepository {
   // ค้นหา User จาก Email หรือ Username
@@ -20,12 +22,15 @@ export class UserRepository {
   }
 
   // สร้าง User ใหม่ลง Database
-  static async createUser(data: {
-    email: string;
-    username: string;
-    passwordHash: string;
-  }) {
-    return await prisma.user.create({
+  static async createUser(
+    tx: Prisma.TransactionClient,
+    data: {
+      email: string;
+      username: string;
+      passwordHash: string;
+    },
+  ) {
+    return await tx.user.create({
       data: {
         email: data.email,
         username: data.username,
