@@ -1,10 +1,15 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
+import { pinoLogger } from "hono-pino";
+import { logger } from "./utils/logger";
+import { globalErrorHandler } from "./middlewares/error.middleware";
+
 import { userController } from "./controllers/user.controllers";
 import { healthController } from "./health/health.controllers";
 import { authController } from "./controllers/auth.controllers";
 import { walletController } from "./controllers/wallet.controllers";
 import { transactionController } from "./controllers/transaction.controllers";
+import { assetController } from "./controllers/asset.controllers";
 import { cors } from "hono/cors";
 
 const app = new OpenAPIHono();
@@ -20,16 +25,20 @@ app.use(
   }),
 );
 
+// ใช้ pinoLogger ดักจับและ Log ทุก HTTP Request/Response ที่ยิงเข้ามา
+app.use(
+  "*",
+  pinoLogger({
+    pino: logger, // ส่ง logger instance ของเราเข้าไปใช้งาน
+  }),
+);
+
+// ตั้งค่า Global Error Handler Middleware
+app.onError(globalErrorHandler);
+
 app.get("/", (c) => {
   return c.text("Hello Hono!");
 });
-
-// Controllers ทั้งหมดของ App หลัก
-app.route("/", userController);
-app.route("/", healthController);
-app.route("/", authController);
-app.route("/", walletController);
-app.route("/", transactionController);
 
 // Scalar API Reference
 app.route(
@@ -46,5 +55,13 @@ app.route(
       }),
   }),
 );
+
+// Controllers ทั้งหมดของ App หลัก
+app.route("/", userController);
+app.route("/", healthController);
+app.route("/", authController);
+app.route("/", walletController);
+app.route("/", transactionController);
+app.route("/", assetController);
 
 export default app;

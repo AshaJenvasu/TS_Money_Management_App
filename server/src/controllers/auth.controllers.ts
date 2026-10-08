@@ -102,7 +102,7 @@ authController.openapi(registerRoute, async (c) => {
     if (error.message === "EMAIL_OR_USERNAME_EXISTS") {
       return c.json({ message: "Email or Username already exists" }, 400);
     }
-    return c.json({ message: "Internal Server Error" }, 500);
+    throw error;
   }
 });
 
@@ -128,7 +128,7 @@ authController.openapi(loginRoute, async (c) => {
     if (error.message === "INVALID_CREDENTIALS") {
       return c.json({ message: "Invalid credentials" }, 401);
     }
-    return c.json({ message: "Internal Server Error" }, 500);
+    throw error;
   }
 });
 

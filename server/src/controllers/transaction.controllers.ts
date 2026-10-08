@@ -137,7 +137,7 @@ transactionController.openapi(getTransactionsRoute, async (c) => {
     if (error.message === "WALLET_NOT_FOUND") {
       return c.json({ message: "Wallet not found" }, 404);
     }
-    return c.json({ message: "Internal Server Error" }, 500);
+    throw error;
   }
 });
 
@@ -181,7 +181,7 @@ transactionController.openapi(createTransactionRoute, async (c) => {
     if (error.message === "WALLET_NOT_FOUND") {
       return c.json({ message: "Wallet not found" }, 404);
     }
-    return c.json({ message: "Internal Server Error" }, 500);
+    throw error;
   }
 });
 
@@ -232,7 +232,7 @@ transactionController.openapi(updateTransactionRoute, async (c) => {
     if (error.message === "TRANSACTION_NOT_FOUND") {
       return c.json({ message: "Transaction not found" }, 404);
     }
-    return c.json({ message: "Internal Server Error" }, 500);
+    throw error;
   }
 });
 
@@ -261,6 +261,6 @@ transactionController.openapi(deleteTransactionRoute, async (c) => {
     if (error.message === "TRANSACTION_NOT_FOUND") {
       return c.json({ message: "Transaction not found" }, 404);
     }
-    return c.json({ message: "Internal Server Error" }, 500);
+    throw error;
   }
 });

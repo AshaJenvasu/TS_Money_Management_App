@@ -238,7 +238,7 @@ walletController.openapi(getWalletsRoute, async (c) => {
     return c.json(wallets, 200);
   } catch (error: any) {
     console.error("Get Wallets Error:", error);
-    return c.json({ message: "Internal Server Error" }, 500);
+    throw error;
   }
 });
 
@@ -264,7 +264,7 @@ walletController.openapi(createWalletRoute, async (c) => {
     if (error.message === "WALLET_NAME_EXISTS") {
       return c.json({ message: "Wallet name already exists" }, 409);
     }
-    return c.json({ message: "Internal Server Error" }, 500);
+    throw error;
   }
 });
 
@@ -294,7 +294,7 @@ walletController.openapi(getWalletRoute, async (c) => {
     if (error.message === "WALLET_NOT_FOUND") {
       return c.json({ message: "Wallet not found" }, 404);
     }
-    return c.json({ message: "Internal Server Error" }, 500);
+    throw error;
   }
 });
 
@@ -330,7 +330,7 @@ walletController.openapi(updateWalletRoute, async (c) => {
     if (error.message === "WALLET_NAME_EXISTS") {
       return c.json({ message: "Wallet name already exists" }, 409);
     }
-    return c.json({ message: "Internal Server Error" }, 500);
+    throw error;
   }
 });
 
@@ -356,7 +356,7 @@ walletController.openapi(deleteWalletRoute, async (c) => {
     if (error.message === "WALLET_NOT_FOUND") {
       return c.json({ message: "Wallet not found" }, 404);
     }
-    return c.json({ message: "Internal Server Error" }, 500);
+    throw error;
   }
 });
 
@@ -385,6 +385,6 @@ walletController.openapi(getWalletBalanceRoute, async (c) => {
     if (error.message === "WALLET_NOT_FOUND") {
       return c.json({ message: "Wallet not found" }, 404);
     }
-    return c.json({ message: "Internal Server Error" }, 500);
+    throw error;
   }
 });
