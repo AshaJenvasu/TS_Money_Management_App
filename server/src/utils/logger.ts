@@ -8,9 +8,9 @@ export const logger = pino({
   redact: {
     paths: [
       // 1. Headers Level
-      "req.headers.cookie", // ซ่อน Cookie[cite: 1]
-      "req.headers.authorization", // ซ่อน Authorization Token (Bearer token)[cite: 1]
-      "req.headers['set-cookie']", // ซ่อน Response Cookie[cite: 1]
+      "req.headers.cookie", // ซ่อน Cookie
+      "req.headers.authorization",
+      "req.headers['set-cookie']", // ซ่อน Response Cookie
 
       // 2. Auth & Passwords
       "password",
@@ -25,6 +25,9 @@ export const logger = pino({
       "*.accessToken",
       "*.refreshToken",
       "*.secret",
+      "*.privateKey",
+      "*.publicKey",
+      "*set-cookie",
     ],
     censor: "[REDACTED]", // ข้อความที่จะขึ้นแทนค่าที่ถูกซ่อน
   },

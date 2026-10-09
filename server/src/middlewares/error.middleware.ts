@@ -34,7 +34,10 @@ export const globalErrorHandler = (err: Error, c: Context) => {
   );
 
   // ตอบกลับ Client ด้วย Format มาตรฐาน 500
-  return c.json({
-    message: err.message,
-  });
+  return c.json(
+    {
+      message: "Internal Server Error",
+    },
+    500,
+  );
 };

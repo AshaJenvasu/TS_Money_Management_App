@@ -10,6 +10,7 @@ import { authController } from "./controllers/auth.controllers";
 import { walletController } from "./controllers/wallet.controllers";
 import { transactionController } from "./controllers/transaction.controllers";
 import { assetController } from "./controllers/asset.controllers";
+import { portfolioController } from "./controllers/portfolio.controllers";
 import { cors } from "hono/cors";
 
 const app = new OpenAPIHono();
@@ -63,5 +64,6 @@ app.route("/", authController);
 app.route("/", walletController);
 app.route("/", transactionController);
 app.route("/", assetController);
+app.route("/", portfolioController);
 
 export default app;
