@@ -59,12 +59,41 @@ function RootLayout() {
         {/* Navbar สไตล์อนิเมะ เข้าธีม Money App */}
         <header className="sticky top-0 z-50 flex h-[60px] w-full items-center justify-between border-b border-[#BFD3F3]/15 bg-[#141A36] px-7">
           {/* โลโก้ฝั่งซ้าย */}
-          <Link to="/" className="flex items-center gap-2.5 no-underline">
+          <div className="flex items-center gap-2.5 no-underline">
             <span className="text-xl">🗻</span>
             <span className="font-['Caveat',_'Mali',_cursive] text-2xl font-bold tracking-wide text-white">
               MONEY APP
             </span>
-          </Link>
+          </div>
+
+          {/* เมนูหลัก แสดงเฉพาะผู้ใช้ที่ล็อกอินแล้ว */}
+          {user || token ? (
+            <nav className="flex items-center gap-2">
+              {/* ปุ่มไปหน้า Dashboard */}
+              <Link
+                to="/dashboard"
+                className="rounded-full bg-[#5568E0] px-4 py-2 text-sm font-semibold text-white no-underline transition-all hover:bg-[#6879F0]"
+              >
+                Dashboard
+              </Link>
+
+              {/* ปุ่ม Wallets สำหรับฟีเจอร์ที่ยังไม่พร้อม */}
+              <button
+                onClick={() => alert("ยังไม่ได้ทำนะจ้ะ")}
+                className="cursor-pointer rounded-full border border-[#5568E0]/50 px-4 py-2 text-sm font-semibold text-[#BFD3F3] transition-all hover:bg-[#5568E0]/20"
+              >
+                Wallets
+              </button>
+
+              {/* ปุ่ม Investment สำหรับฟีเจอร์ที่ยังไม่พร้อม */}
+              <button
+                onClick={() => alert("ยังไม่ได้ทำนะจ้ะ")}
+                className="cursor-pointer rounded-full border border-[#5568E0]/50 px-4 py-2 text-sm font-semibold text-[#BFD3F3] transition-all hover:bg-[#5568E0]/20"
+              >
+                Investment
+              </button>
+            </nav>
+          ) : null}
 
           {/* ฝั่งขวา: เช็กสถานะการล็อกอิน */}
           {user || token ? (
