@@ -28,6 +28,20 @@ export const GetPortfolioResponseSchema = z.object({
   holdings: z.array(PortfolioHoldingItemSchema),
 });
 
+export const GetPortfolioTransactionsResponseSchema = z.array(
+  z.object({
+    transactionId: z.string(),
+    portfolioId: z.string(),
+    assetId: z.string(),
+    assetName: z.string(),
+    symbol: z.string(),
+    transactionType: z.enum(["buy", "sell"]),
+    quantity: z.string(),
+    pricePerUnit: z.string(),
+    transactionDate: z.date(),
+  }),
+);
+
 // ตรวจสอบข้อมูลที่ Client ส่งมาเพื่อสร้าง Portfolio Transaction
 export const CreatePortfolioTransactionSchema = z.object({
   assetId: z

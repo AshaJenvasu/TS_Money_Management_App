@@ -10,6 +10,7 @@ import { useAuthStore } from "../stores/useAuthStore";
 import { useEffect } from "react";
 import { authService } from "../api/auth.services";
 import { isAxiosError } from "axios";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 // 1. Instance ของ TanStack Query
 export const queryClient = new QueryClient();
@@ -159,6 +160,7 @@ function RootLayout() {
           <Outlet />
         </main>
       </div>
+      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }

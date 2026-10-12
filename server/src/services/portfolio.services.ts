@@ -56,6 +56,29 @@ export class PortfolioService {
     };
   }
 
+  static async getPortfolioTransactions(userId: bigint) {
+    const portfolio = await PortfolioRepository.findByUserId(userId);
+
+    if (!portfolio) {
+      throw new Error("Portfolio not found");
+    }
+
+    const transactions =
+      await PortfolioRepository.findTransactionsByPortfolioId(portfolio.id);
+
+    return transactions.map((transaction) => ({
+      transactionId: transaction.id.toString(),
+      portfolioId: transaction.portfolioId.toString(),
+      assetId: transaction.assetId.toString(),
+      assetName: transaction.asset.name,
+      symbol: transaction.asset.symbol,
+      transactionType: transaction.transactionType,
+      quantity: transaction.quantity.toString(),
+      pricePerUnit: transaction.pricePerUnit.toString(),
+      transactionDate: transaction.transactionDate,
+    }));
+  }
+
   // บันทึกธุรกรรมและอัปเดต Holding ให้สำเร็จหรือล้มเหลวพร้อมกัน
   static async createPortfolioTransaction(
     input: CreatePortfolioTransactionInput,

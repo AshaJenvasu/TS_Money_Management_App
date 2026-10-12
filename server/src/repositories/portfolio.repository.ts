@@ -174,4 +174,15 @@ export class PortfolioRepository {
       where: { id: transactionId },
     });
   }
+
+  // ค้นหาประวัติซื้อขายทั้งหมดของ Portfolio พร้อมข้อมูล Asset
+  static async findTransactionsByPortfolioId(portfolioId: bigint) {
+    return await prisma.portfolioTransaction.findMany({
+      where: { portfolioId },
+      include: {
+        asset: true,
+      },
+      orderBy: [{ transactionDate: "desc" }, { id: "desc" }],
+    });
+  }
 }

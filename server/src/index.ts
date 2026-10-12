@@ -58,12 +58,16 @@ app.route(
 );
 
 // Controllers ทั้งหมดของ App หลัก
-app.route("/", userController);
-app.route("/", healthController);
-app.route("/", authController);
-app.route("/", walletController);
-app.route("/", transactionController);
-app.route("/", assetController);
-app.route("/", portfolioController);
+const api = new OpenAPIHono();
+
+api.route("/", userController);
+api.route("/", healthController);
+api.route("/", authController);
+api.route("/", walletController);
+api.route("/", transactionController);
+api.route("/", assetController);
+api.route("/", portfolioController);
+
+app.route("/api/v1", api);
 
 export default app;

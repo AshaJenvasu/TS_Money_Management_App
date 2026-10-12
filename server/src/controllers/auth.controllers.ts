@@ -15,7 +15,7 @@ export const authController = new OpenAPIHono();
 //  OpenAPI Route Specification
 export const registerRoute = createRoute({
   method: "post",
-  path: "/api/v1/auth/register",
+  path: "/auth/register",
   tags: ["Auth"],
   request: {
     body: {
@@ -44,7 +44,7 @@ export const registerRoute = createRoute({
 //  OpenAPI Route Specification
 export const loginRoute = createRoute({
   method: "post",
-  path: "/api/v1/auth/login",
+  path: "/auth/login",
   tags: ["Auth"],
   request: {
     body: {
@@ -73,7 +73,7 @@ export const loginRoute = createRoute({
 // OpenAPI Specification สำหรับ Logout
 export const logoutRoute = createRoute({
   method: "post",
-  path: "/api/v1/auth/logout",
+  path: "/auth/logout",
   tags: ["Auth"],
   responses: {
     200: {

@@ -15,7 +15,7 @@ export const walletController = new OpenAPIHono();
 //  OpenAPI Route Specification สำหรับ GET /api/v1/wallets
 export const getWalletsRoute = createRoute({
   method: "get",
-  path: "/api/v1/wallets",
+  path: "/wallets",
   tags: ["Wallet"],
   security: [{ Bearer: [] }],
 
@@ -38,7 +38,7 @@ export const getWalletsRoute = createRoute({
 //  OpenAPI Route Specification สำหรับ POST /api/v1/wallets
 export const createWalletRoute = createRoute({
   method: "post",
-  path: "/api/v1/wallets",
+  path: "/wallets",
   tags: ["Wallet"],
   security: [{ Bearer: [] }],
 
@@ -79,7 +79,7 @@ export const createWalletRoute = createRoute({
 //  OpenAPI Route Specification สำหรับ GET /api/v1/wallets/{id}
 export const getWalletRoute = createRoute({
   method: "get",
-  path: "/api/v1/wallets/{id}",
+  path: "/wallets/{id}",
   tags: ["Wallet"],
   security: [{ Bearer: [] }],
 
@@ -110,7 +110,7 @@ export const getWalletRoute = createRoute({
 //  OpenAPI Route Specification สำหรับ PUT /api/v1/wallets/{id}
 export const updateWalletRoute = createRoute({
   method: "put",
-  path: "/api/v1/wallets/{id}",
+  path: "/wallets/{id}",
   tags: ["Wallet"],
   security: [{ Bearer: [] }],
 
@@ -157,7 +157,7 @@ export const updateWalletRoute = createRoute({
 //  OpenAPI Route Specification สำหรับ DELETE /api/v1/wallets/{id}
 export const deleteWalletRoute = createRoute({
   method: "delete",
-  path: "/api/v1/wallets/{id}",
+  path: "/wallets/{id}",
   tags: ["Wallet"],
   security: [{ Bearer: [] }],
 
@@ -187,7 +187,7 @@ export const deleteWalletRoute = createRoute({
 // กำหนดรายละเอียด OpenAPI สำหรับดูยอดเงินคงเหลือของ Wallet
 export const getWalletBalanceRoute = createRoute({
   method: "get",
-  path: "/api/v1/wallets/{id}/balance",
+  path: "/wallets/{id}/balance",
   tags: ["Wallet"],
   security: [{ Bearer: [] }],
 
@@ -220,7 +220,7 @@ export const getWalletBalanceRoute = createRoute({
 });
 
 // บังคับให้ทุก Route ใต้ /api/v1/wallets ต้องผ่าน Authentication
-walletController.use("/api/v1/wallets/*", authMiddleware);
+walletController.use("/wallets/*", authMiddleware);
 
 // 1. Controller: getWalletsRoute
 walletController.openapi(getWalletsRoute, async (c) => {

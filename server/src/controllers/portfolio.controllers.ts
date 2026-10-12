@@ -10,6 +10,7 @@ import {
   UpdatePortfolioTransactionParamsSchema,
   DeletePortfolioTransactionParamsSchema,
   DeletePortfolioTransactionResponseSchema,
+  GetPortfolioTransactionsResponseSchema,
 } from "../schema/portfolio.schema";
 import { PortfolioService } from "../services/portfolio.services";
 
@@ -46,6 +47,48 @@ portfolioController.openapi(getPortfolioRoute, async (c) => {
 
     // ส่งข้อมูลพอร์ตกลับให้ Client
     return c.json(portfolio, 200);
+  } catch (error) {
+    // ส่ง Error อื่นให้ Global Error Handler จัดการ
+    throw error;
+  }
+});
+
+// กำหนด API สำหรับอ่านประวัติธุรกรรมทั้งหมดของ Portfolio
+const getPortfolioTransactionsRoute = createRoute({
+  method: "get",
+  path: "/portfolio/transactions",
+  tags: ["Portfolio"],
+  responses: {
+    200: {
+      description: "ดึงประวัติธุรกรรมสำเร็จ",
+      content: {
+        "application/json": {
+          schema: GetPortfolioTransactionsResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "ไม่ได้เข้าสู่ระบบ",
+    },
+    500: {
+      description: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์",
+    },
+  },
+});
+
+// เชื่อม Route เข้ากับ Service ผ่าน Controller
+portfolioController.openapi(getPortfolioTransactionsRoute, async (c) => {
+  try {
+    // อ่าน User ID จาก JWT Payload ที่ Middleware ตรวจสอบแล้ว
+    const payload = c.get("jwtPayload") as { id: string };
+    const userId = BigInt(payload.id);
+
+    // เรียก Service เพื่อดึงประวัติธุรกรรม
+    const transactions =
+      await PortfolioService.getPortfolioTransactions(userId);
+
+    // ส่งประวัติธุรกรรมกลับให้ Client
+    return c.json({ transactions }, 200);
   } catch (error) {
     // ส่ง Error อื่นให้ Global Error Handler จัดการ
     throw error;

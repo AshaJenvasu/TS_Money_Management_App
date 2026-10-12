@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.103.2",
+    "@tanstack/react-query-devtools": "^5.104.2",
     "@tanstack/react-router": "^1.170.39",
     "axios": "^1.20.0",
     "daisyui": "^5.7.46",
