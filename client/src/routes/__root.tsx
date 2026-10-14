@@ -20,6 +20,7 @@ function RootLayout() {
   const { user, token, logout, setAuth } = useAuthStore();
   const navigate = useNavigate();
 
+  // ตรวจสอบการเข้าสู่ระบบ
   useEffect(() => {
     const verifyUser = async () => {
       if (!token) return;
@@ -42,6 +43,12 @@ function RootLayout() {
 
     verifyUser();
   }, [token, setAuth, logout]);
+
+  useEffect(() => {
+    if (token || user) {
+      navigate({ to: "/dashboard", replace: true });
+    }
+  }, [token, user, navigate]);
 
   const handleLogout = async () => {
     try {

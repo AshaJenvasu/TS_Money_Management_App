@@ -370,3 +370,41 @@ body {
   color: #ffffff;
   box-shadow: 0 4px 14px rgba(74, 93, 214, 0.5);
 }
+
+.dashboard-petal {
+  animation: dashboard-petal-fall linear infinite;
+}
+
+@keyframes dashboard-petal-fall {
+  from {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  to {
+    transform: translate3d(var(--petal-drift), 560px, 0) rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-petal {
+    animation: none;
+  }
+}
+
+.dashboard-cat-wave {
+  animation: dashboard-cat-wave 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes dashboard-cat-wave {
+  from {
+    transform: rotate(-8deg);
+  }
+  to {
+    transform: rotate(12deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-cat-wave {
+    animation: none;
+  }
+}
