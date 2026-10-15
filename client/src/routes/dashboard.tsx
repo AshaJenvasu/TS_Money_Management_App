@@ -1,8 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { DashboardSkeleton } from "../components/dashboard/DashboardSkeleton";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useWalletsQuery } from "../hooks/useWalletsQuery";
-import { useTransactionsQuery } from "../hooks/useTransactionsQuery";
+import { useAllTransactionsQuery } from "../hooks/useTransactionsQuery";
 import { WalletCard } from "../components/dashboard/WalletCard";
 import { PortfolioCard } from "../components/dashboard/PortfolioCard";
 import { useState } from "react";
@@ -11,7 +12,12 @@ import { walletService } from "../services/wallet.services";
 import { Eye, EyeOff, WalletCards, Plus, PieChart } from "lucide-react";
 import { DashboardScene } from "../components/dashboard/DashboardScene";
 import { DashboardMascot } from "../components/dashboard/DashboardMascot";
+import { Wallet as WalletIcon } from "lucide-react";
+import { createPortal } from "react-dom";
+import axios from "axios";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+// หน้า Dashboard
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: () => {
     const { token } = useAuthStore.getState();
@@ -26,10 +32,67 @@ export const Route = createFileRoute("/dashboard")({
 // แสดงรายการ Wallet และสถานะของ API
 function DashboardPage() {
   const user = useAuthStore((state) => state.user);
+  const queryClient = useQueryClient();
 
-  const { data: wallets, isPending, isError, error } = useWalletsQuery();
-
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [walletName, setWalletName] = useState("");
+  const [validationError, setValidationError] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+
+  // ควบคุมการเปิด-ปิด Popup
+  const [isTransactionsOpen, setIsTransactionsOpen] = useState(false);
+
+  // เก็บหน้าปัจจุบันของ Pagination
+  const [transactionPage, setTransactionPage] = useState(1);
+
+  // สร้าง Wallet
+  const createMutation = useMutation({
+    mutationFn: () => walletService.createWallet(walletName.trim()),
+
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["wallets"] });
+
+      setIsCreateOpen(false);
+      setWalletName("");
+      setValidationError("");
+      setErrorMessage("");
+    },
+
+    onError: (error: unknown) => {
+      if (axios.isAxiosError<{ message: string }>(error)) {
+        setErrorMessage(
+          error.response?.data?.message || "Failed to create wallet.",
+        );
+        return;
+      }
+
+      setErrorMessage("An unexpected error occurred.");
+    },
+  });
+  const handleCreateWallet = () => {
+    const name = walletName.trim();
+
+    if (!name) {
+      setValidationError("Wallet name is required");
+      return;
+    }
+
+    if (name.length > 100) {
+      setValidationError("Wallet name must not exceed 100 characters");
+      return;
+    }
+
+    createMutation.mutate();
+  };
+
+  const {
+    data: wallets,
+    isPending,
+    isError,
+    error,
+    refetch,
+  } = useWalletsQuery();
 
   // ดึงยอดเงินของแต่ละ Wallet
   const balanceQueries = useQueries({
@@ -59,21 +122,23 @@ function DashboardPage() {
 
   // ตรวจสอบสถานะการโหลด
   const isBalancePending = balanceQueries.some((query) => query.isPending);
+  const isBalanceError = balanceQueries.some((query) => query.isError);
 
-  // ดึงรายการ Transaction
-  const transactionQueries = useTransactionsQuery(
-    wallets?.map((wallet) => wallet.id) ?? [],
-  );
+  // ดึง Transaction ล่าสุด 5 รายการจากทุก Wallet
+  const {
+    data: transactionResponse,
+    isPending: isRecentTransactionsPending,
+    isError: isRecentTransactionsError,
+  } = useAllTransactionsQuery(1, 5);
 
-  // ดึง 5 รายการ Transaction ล่าสุด
-  const recentTransactions = transactionQueries
-    .flatMap((query) => query.data ?? [])
-    .sort(
-      (a, b) =>
-        new Date(b.transaction_date).getTime() -
-        new Date(a.transaction_date).getTime(),
-    )
-    .slice(0, 5);
+  const recentTransactions = transactionResponse?.data ?? [];
+
+  // ดึง Transaction ตามหน้าที่เลือกใน Popup
+  const {
+    data: allTransactionsResponse,
+    isPending: isTransactionsPending,
+    isError: isTransactionsError,
+  } = useAllTransactionsQuery(transactionPage, 5);
 
   // คํานวณยอดเงินทั้งหมด
   const formatCurrency = (amount: number) =>
@@ -83,14 +148,33 @@ function DashboardPage() {
     }).format(amount);
 
   if (isPending) {
-    return <div className="p-8">กำลังโหลด Wallet...</div>;
+    return <DashboardSkeleton />;
   }
 
   if (isError) {
     return (
-      <div className="p-8 text-error">
-        โหลด Wallet ไม่สำเร็จ: {error.message}
-      </div>
+      <main className="flex min-h-screen items-center justify-center bg-[#E3D9F6] px-5">
+        <div className="w-full max-w-sm rounded-[28px] bg-white p-8 text-center shadow-sm">
+          <div className="mb-4 text-5xl">🥺</div>
+
+          <h2 className="text-xl font-bold text-[#6D5A91]">
+            โหลดข้อมูลไม่สำเร็จ
+          </h2>
+
+          <p className="mt-2 text-sm text-gray-500">
+            {error.message || "เกิดข้อผิดพลาด กรุณาลองอีกครั้ง"}
+          </p>
+
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="btn mt-6 w-full rounded-full border-0 bg-[#AAA6EE] text-white hover:bg-[#918CE0]"
+          >
+            <span className="mr-2">↻</span>
+            ลองอีกครั้ง
+          </button>
+        </div>
+      </main>
     );
   }
 
@@ -121,7 +205,6 @@ function DashboardPage() {
             </span>
           </div>
         </header>
-
         {/* Greeting */}
         <section className="mt-8">
           <p className="text-sm font-medium text-[#7775A8]">
@@ -143,7 +226,6 @@ function DashboardPage() {
             </div>
           </div>
         </section>
-
         {/* Total Balance Card */}
         <section className="relative mt-7 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#7775E8] via-[#A18AE8] to-[#F0A9CF] p-6 text-white shadow-lg shadow-purple-200/60">
           <div className="absolute -right-8 -top-10 size-36 rounded-full bg-white/10" />
@@ -174,9 +256,11 @@ function DashboardPage() {
             <div className="mt-3 text-3xl font-extrabold tracking-tight">
               {isBalancePending
                 ? "กำลังโหลด..."
-                : isBalanceVisible
-                  ? `฿${formatCurrency(totalBalance)}`
-                  : "฿ •••••••"}
+                : isBalanceError
+                  ? "โหลดข้อมูลไม่สำเร็จ"
+                  : isBalanceVisible
+                    ? `฿${formatCurrency(totalBalance)}`
+                    : "฿ •••••••"}
             </div>
 
             <p className="mt-2 text-xs text-white/80">
@@ -189,7 +273,6 @@ function DashboardPage() {
             </div>
           </div>
         </section>
-
         {/* Wallet Allocation */}
         <section className="mt-5 rounded-[28px] border border-white/70 bg-white/65 p-5 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
@@ -264,7 +347,6 @@ function DashboardPage() {
             })}
           </div>
         </section>
-
         {/* Wallet Cards จาก API จริง */}
         <section className="mt-8">
           <div className="mb-4 flex items-center justify-between">
@@ -289,7 +371,10 @@ function DashboardPage() {
               disabled:cursor-not-allowed disabled:shadow-none"
                 disabled={wallets.length >= 4}
                 onClick={() => {
-            
+                  setWalletName("");
+                  setValidationError("");
+                  setErrorMessage("");
+                  setIsCreateOpen(true);
                 }}
               >
                 <Plus size={16} />
@@ -311,12 +396,10 @@ function DashboardPage() {
             ))}
           </div>
         </section>
-
         {/* Portfolio Section */}
         <section className="mt-5">
           <PortfolioCard />
         </section>
-
         {/* Recent Transactions */}
         <section className="mt-6">
           <div className="mb-4 flex items-center justify-between">
@@ -331,7 +414,8 @@ function DashboardPage() {
               type="button"
               className="text-sm font-semibold text-[#7566C7]"
               onClick={() => {
-                // TODO: เชื่อมไปหน้ารายการ Transactions ทั้งหมด
+                setTransactionPage(1);
+                setIsTransactionsOpen(true);
               }}
             >
               ดูทั้งหมด →
@@ -339,7 +423,15 @@ function DashboardPage() {
           </div>
 
           <div className="flex flex-col gap-3">
-            {recentTransactions.length === 0 ? (
+            {isRecentTransactionsPending ? (
+              <div className="rounded-2xl bg-white/65 p-5 text-center text-sm text-[#8986A8]">
+                กำลังโหลดรายการธุรกรรม...
+              </div>
+            ) : isRecentTransactionsError ? (
+              <div className="rounded-2xl bg-white/65 p-5 text-center text-sm text-error">
+                โหลดรายการธุรกรรมไม่สำเร็จ
+              </div>
+            ) : recentTransactions.length === 0 ? (
               <div className="rounded-2xl bg-white/65 p-5 text-center text-sm text-[#8986A8]">
                 ยังไม่มีรายการธุรกรรม
               </div>
@@ -402,6 +494,251 @@ function DashboardPage() {
             )}
           </div>
         </section>
+
+        {/* All Transactions Modal */}
+        {isTransactionsOpen &&
+          createPortal(
+            <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-4">
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="transactions-title"
+                className="w-full max-w-lg rounded-3xl bg-[#F8F6FF] p-5 shadow-2xl"
+              >
+                {/* Header */}
+                <div className="mb-5 flex items-center justify-between">
+                  <div>
+                    <h3
+                      id="transactions-title"
+                      className="text-xl font-bold text-[#39365F]"
+                    >
+                      รายการธุรกรรมทั้งหมด
+                    </h3>
+                    <p className="mt-1 text-xs text-[#8986A8]">
+                      ประวัติรายรับและรายจ่ายของคุณ
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-circle btn-sm border-0 bg-white text-[#7566C7]"
+                    onClick={() => setIsTransactionsOpen(false)}
+                    aria-label="ปิด Popup"
+                  >
+                    ✕
+                  </button>
+                </div>
+                {/* Transaction List */}
+                <div className="flex max-h-[55vh] flex-col gap-3 overflow-y-auto">
+                  {isTransactionsPending ? (
+                    <div className="p-5 text-center text-sm text-[#8986A8]">
+                      กำลังโหลดรายการธุรกรรม...
+                    </div>
+                  ) : isTransactionsError ? (
+                    <div className="p-5 text-center text-sm text-error">
+                      โหลดรายการธุรกรรมไม่สำเร็จ
+                    </div>
+                  ) : allTransactionsResponse.data.length === 0 ? (
+                    <div className="p-5 text-center text-sm text-[#8986A8]">
+                      ยังไม่มีรายการธุรกรรม
+                    </div>
+                  ) : (
+                    allTransactionsResponse.data.map((transaction) => {
+                      const wallet = wallets.find(
+                        (item) => item.id === transaction.wallet_id,
+                      );
+
+                      const isIncome =
+                        transaction.transaction_type === "income";
+                      const date = new Date(transaction.transaction_date);
+
+                      return (
+                        <div
+                          key={transaction.id}
+                          className="flex items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white/80 p-4"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div
+                              className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
+                                isIncome
+                                  ? "bg-[#E2F5E9] text-[#399568]"
+                                  : "bg-[#FCE7EF] text-[#D85D8B]"
+                              }`}
+                            >
+                              {isIncome ? "+" : "−"}
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-[#39365F]">
+                                {transaction.note || "รายการธุรกรรม"}
+                              </p>
+                              <p className="mt-1 text-xs text-[#8986A8]">
+                                {wallet?.name ?? "Wallet"} ·{" "}
+                                {date.toLocaleDateString("th-TH", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </p>
+                            </div>
+                          </div>
+
+                          <p
+                            className={`shrink-0 text-sm font-bold ${
+                              isIncome ? "text-[#399568]" : "text-[#D85D8B]"
+                            }`}
+                          >
+                            {isIncome ? "+" : "−"}฿
+                            {formatCurrency(Number(transaction.amount))}
+                          </p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Pagination */}
+                <div className="mt-5 flex items-center justify-between border-t border-[#E9E3FF] pt-4">
+                  <button
+                    type="button"
+                    className="btn btn-sm rounded-full border-0 bg-white text-[#7566C7] disabled:opacity-40"
+                    disabled={transactionPage <= 1 || isTransactionsPending}
+                    onClick={() => setTransactionPage((page) => page - 1)}
+                  >
+                    ← ก่อนหน้า
+                  </button>
+
+                  <span className="text-sm font-semibold text-[#39365F]">
+                    หน้า{" "}
+                    {allTransactionsResponse?.pagination.page ??
+                      transactionPage}
+                    {" / "}
+                    {allTransactionsResponse?.pagination.totalPages ?? 1}
+                    {/* เครื่องหมาย ?? เรียกว่า Nullish Coalescing Operatorความหมายคือ:
+                        - ถ้าค่าทางซ้ายมีค่า ก็ใช้ค่านั้น
+                        - ถ้าค่าทางซ้ายเป็น null หรือ undefined ให้ใช้ค่าทางขวาแทน */}
+                  </span>
+
+                  <button
+                    type="button"
+                    className="btn btn-sm rounded-full border-0 bg-[#7566C7] text-white disabled:opacity-40"
+                    disabled={
+                      isTransactionsPending ||
+                      transactionPage >=
+                        (allTransactionsResponse?.pagination.totalPages ?? 1)
+                    }
+                    onClick={() => setTransactionPage((page) => page + 1)}
+                  >
+                    ถัดไป →
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )}
+        {/* Create Wallet Modal */}
+        {isCreateOpen &&
+          createPortal(
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="create-wallet-title"
+                className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
+              >
+                <div className="mb-6 flex items-center gap-3">
+                  <div className="flex size-12 items-center justify-center rounded-xl bg-[#EAE5FF] text-[#7566C7]">
+                    <WalletIcon size={24} />
+                  </div>
+
+                  <div>
+                    <h3
+                      id="create-wallet-title"
+                      className="text-xl font-bold text-[#39365F]"
+                    >
+                      สร้างกระเป๋าเงิน
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      ตั้งชื่อกระเป๋าเงินของคุณ
+                    </p>
+                  </div>
+                </div>
+
+                <label className="form-control">
+                  <span className="label-text mb-2 font-medium text-[#39365F]">
+                    Wallet Name
+                  </span>
+
+                  <input
+                    type="text"
+                    className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
+                    placeholder="Enter wallet name"
+                    value={walletName}
+                    onChange={(e) => {
+                      setWalletName(e.target.value);
+                      setValidationError("");
+                      setErrorMessage("");
+                    }}
+                    maxLength={100}
+                    autoFocus
+                    disabled={createMutation.isPending}
+                  />
+
+                  {validationError && (
+                    <p className="mt-2 text-sm text-error">{validationError}</p>
+                  )}
+                </label>
+
+                {errorMessage && (
+                  <p className="mt-3 text-sm text-error">{errorMessage}</p>
+                )}
+
+                <div className="mt-8 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => setIsCreateOpen(false)}
+                    disabled={createMutation.isPending}
+                  >
+                    ยกเลิก
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn border-0 bg-[#7566C7] text-white hover:bg-[#6356B8]"
+                    onClick={handleCreateWallet}
+                    disabled={
+                      !walletName.trim() ||
+                      walletName.trim().length > 100 ||
+                      createMutation.isPending ||
+                      wallets.length >= 4
+                    }
+                  >
+                    {createMutation.isPending ? (
+                      <>
+                        <span className="loading loading-spinner loading-sm" />
+                        กำลังสร้าง...
+                      </>
+                    ) : (
+                      "สร้างกระเป๋า"
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="absolute inset-0 -z-10 cursor-default"
+                aria-label="ปิด Popup"
+                onClick={() => {
+                  if (!createMutation.isPending) {
+                    setIsCreateOpen(false);
+                  }
+                }}
+              />
+            </div>,
+            document.body,
+          )}
       </main>
     </div>
   );

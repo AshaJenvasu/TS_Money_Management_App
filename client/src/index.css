@@ -408,3 +408,60 @@ body {
     animation: none;
   }
 }
+
+/* แมวเด้งตัวเบา ๆ */
+.dashboard-cat.is-playing svg {
+  animation: cat-bounce 0.45s ease-in-out 2;
+}
+
+/* โบกอุ้งเท้า */
+.dashboard-cat.is-playing .dashboard-cat-wave {
+  animation: cat-wave 0.35s ease-in-out 3;
+  transform-box: view-box;
+  transform-origin: 108px 75px;
+}
+
+/* กระดิกหาง */
+.dashboard-cat.is-playing svg > path:first-child {
+  animation: cat-tail 0.4s ease-in-out 3;
+  transform-box: view-box;
+  transform-origin: 125px 85px;
+}
+
+@keyframes cat-bounce {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-7px) rotate(-2deg);
+  }
+}
+
+@keyframes cat-wave {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  50% {
+    transform: rotate(-12deg);
+  }
+}
+
+@keyframes cat-tail {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  50% {
+    transform: rotate(12deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-cat.is-playing svg,
+  .dashboard-cat.is-playing .dashboard-cat-wave,
+  .dashboard-cat.is-playing svg > path:first-child {
+    animation: none;
+  }
+}

@@ -45,3 +45,14 @@ export const UpdateTransactionBodySchema = z.object({
     )
     .openapi({ example: "2026-10-07T10:00:00Z" }),
 });
+// Query Schema สำหรับกำหนดหน้าที่ต้องการและจำนวนรายการ
+export const TransactionPaginationQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1).openapi({
+    example: 1,
+    description: "หน้าที่ต้องการดึงข้อมูล",
+  }),
+  limit: z.coerce.number().int().min(1).max(100).default(5).openapi({
+    example: 5,
+    description: "จำนวนรายการต่อหน้า",
+  }),
+});

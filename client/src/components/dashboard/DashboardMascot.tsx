@@ -1,6 +1,19 @@
+import { useState } from "react";
+
 export function DashboardMascot() {
+  const [isPlaying, setIsPlaying] = useState(false);
   return (
-    <div className="pointer-events-none relative mx-auto flex h-28 items-end justify-center">
+    <div
+      className={`dashboard-cat relative mx-auto flex h-28 items-end justify-center ${
+        isPlaying ? "is-playing" : ""
+      }`}
+      onMouseEnter={() => setIsPlaying(true)}
+      onMouseLeave={() => setIsPlaying(false)}
+      onClick={() => setIsPlaying((playing) => !playing)}
+      role="button"
+      tabIndex={0}
+      aria-label="เล่นกับแมว"
+    >
       {/* Floating Coin */}
       {/* <div className="absolute right-10 top-1 animate-bounce text-3xl">🪙</div> */}
 

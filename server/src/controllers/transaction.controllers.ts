@@ -7,12 +7,15 @@ import {
   TransactionIdParamSchema,
   CreateTransactionBodySchema,
   UpdateTransactionBodySchema,
+  TransactionPaginationQuerySchema,
 } from "../schema/transaction.schema";
 
 export const transactionController = new OpenAPIHono();
 
 // บังคับใช้ Auth Middleware สำหรับทุก Endpoints ใน Transaction Module
 transactionController.use("/wallets/*", authMiddleware);
+// บังคับใช้ Auth Middleware สำหรับทุก Endpoints ใน Transaction Module
+transactionController.use("/transactions", authMiddleware);
 
 // ==========================================
 // OpenAPI Route Specifications
@@ -99,6 +102,28 @@ export const deleteTransactionRoute = createRoute({
     400: { description: "Invalid parameters" },
     401: { description: "Unauthorized - Missing or invalid token" },
     404: { description: "Wallet or transaction not found" },
+  },
+});
+
+// 5. Spec สำหรับ GET /transactions
+export const getAllTransactionsRoute = createRoute({
+  method: "get",
+  path: "/transactions",
+  tags: ["Transaction"],
+  security: [{ Bearer: [] }],
+  request: {
+    query: TransactionPaginationQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "Retrieve transactions with pagination successfully",
+    },
+    400: {
+      description: "Invalid pagination parameters",
+    },
+    401: {
+      description: "Unauthorized - Missing or invalid token",
+    },
   },
 });
 
@@ -263,4 +288,41 @@ transactionController.openapi(deleteTransactionRoute, async (c) => {
     }
     throw error;
   }
+});
+
+// 5. GET /transactions
+transactionController.openapi(getAllTransactionsRoute, async (c) => {
+  // รับ Query Parameters และ User ID จาก JWT
+  const { page, limit } = c.req.valid("query");
+  const payload = c.get("jwtPayload") as {
+    id: string;
+    email: string;
+  };
+  const userId = BigInt(payload.id);
+
+  // ดึง Transaction ของ User ทุก Wallet พร้อม Pagination
+  const result = await TransactionService.getTransactionsByUserId(
+    userId,
+    page,
+    limit,
+  );
+
+  // แปลงข้อมูลให้ส่งผ่าน JSON ได้
+  const transactions = result.transactions.map((t) => ({
+    id: t.id.toString(),
+    wallet_id: t.walletId.toString(),
+    transaction_type: t.transactionType,
+    amount: t.amount.toString(),
+    note: t.note,
+    transaction_date: t.transactionDate.toISOString(),
+    created_at: t.createdAt.toISOString(),
+  }));
+
+  return c.json(
+    {
+      data: transactions,
+      pagination: result.pagination,
+    },
+    200,
+  );
 });

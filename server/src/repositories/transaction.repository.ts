@@ -77,4 +77,34 @@ export class TransactionRepository {
       },
     });
   }
+
+  // ดึง Transaction ล่าสุดจากทุก Wallet ของ User พร้อม Pagination
+  static async findManyByUserId(
+    userId: bigint,
+    skip: number,
+    take: number,
+    db: DbClient = prisma,
+  ) {
+    return await db.transaction.findMany({
+      where: {
+        wallet: {
+          userId,
+        },
+      },
+      orderBy: [{ transactionDate: "desc" }, { id: "desc" }],
+      skip,
+      take,
+    });
+  }
+
+  // นับจำนวน Transaction ทั้งหมดของ User จากทุก Wallet
+  static async countByUserId(userId: bigint, db: DbClient = prisma) {
+    return await db.transaction.count({
+      where: {
+        wallet: {
+          userId,
+        },
+      },
+    });
+  }
 }

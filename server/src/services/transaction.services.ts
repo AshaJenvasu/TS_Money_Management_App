@@ -110,4 +110,30 @@ export class TransactionService {
       return await TransactionRepository.delete(id, tx);
     });
   }
+
+  // ดึง Transaction ทุก Wallet ของ User พร้อม Pagination
+  static async getTransactionsByUserId(
+    userId: bigint,
+    page: number,
+    limit: number,
+  ) {
+    const skip = (page - 1) * limit;
+
+    // ดึงข้อมูลและนับจำนวนทั้งหมดพร้อมกันคำสั่งดึงรายการ (findMany) กับนับจำนวนรวม (count) เป็นสองคิวรีที่ ไม่ต้องรอกัน ถ้าเขียนแบบ await ทีละตัว มันจะรอตัวแรกเสร็จก่อนค่อยเริ่มตัวที่สอง แต่ Promise.all สั่งให้ทำ พร้อมกัน แล้วรอจนเสร็จทั้งคู่ เวลาที่ใช้เลยเท่ากับตัวที่ช้าที่สุด ไม่ใช่เอามาบวกกัน เร็วขึ้นเกือบเท่าตัวเลย
+    const [transactions, total] = await Promise.all([
+      TransactionRepository.findManyByUserId(userId, skip, limit),
+      TransactionRepository.countByUserId(userId),
+    ]);
+
+    return {
+      transactions,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        //คือจำนวนหน้าทั้งหมด ใช้ ceil (ปัดขึ้น) เพราะเศษก็ยังต้องใช้อีกหน้าหนึ่ง เช่น มี 25 รายการ หน้าละ 10 25 / 10 = 2.5 → ปัดขึ้นเป็น 3 หน้า (หน้าสุดท้ายมี 5 รายการ)
+      },
+    };
+  }
 }

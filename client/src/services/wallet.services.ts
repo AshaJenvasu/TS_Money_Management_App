@@ -38,4 +38,13 @@ export const walletService = {
   deleteWallet: async (walletId: string): Promise<void> => {
     await api.delete(`/wallets/${walletId}`);
   },
+
+  // สร้าง Wallet ใหม่
+  createWallet: async (name: string): Promise<Wallet> => {
+    const response = await api.post<Wallet>("/wallets", {
+      name,
+    });
+
+    return response.data;
+  },
 };

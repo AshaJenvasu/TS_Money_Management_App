@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import "./index.css";
+import { SmoothScroll } from "./components/SmoothScroll";
 
 // ดึง Route Tree ที่ TanStack Router Plugin แอบสร้างให้อัตโนมัติ
 import { routeTree } from "./routeTree.gen";
@@ -18,6 +19,7 @@ declare module "@tanstack/react-router" {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
+    <SmoothScroll />
     <RouterProvider router={router} />
   </React.StrictMode>,
 );
