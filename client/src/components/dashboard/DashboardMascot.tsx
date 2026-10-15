@@ -7,7 +7,7 @@ export function DashboardMascot() {
       {/* Cat */}
       <svg
         viewBox="0 0 160 120"
-        className="h-28 w-36 overflow-visible"
+        className="h-24 w-32 overflow-visible"
         aria-label="Cute cat mascot waving"
         role="img"
       >

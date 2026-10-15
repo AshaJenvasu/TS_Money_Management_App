@@ -42,7 +42,11 @@ export class WalletService {
       if (existingWallet) {
         throw new Error("WALLET_NAME_EXISTS");
       }
+      const walletCount = await WalletRepository.countByUserId(userId);
 
+      if (walletCount >= 4) {
+        throw new Error("WALLET_LIMIT_REACHED");
+      }
       // บันทึก Wallet ใหม่ลงฐานข้อมูล
       const wallet = await WalletRepository.create(userId, name);
 
@@ -55,10 +59,12 @@ export class WalletService {
       };
     } catch (error: any) {
       // โยน Error ต่อให้ Controller จัดการแยกแยะ HTTP Status
-      if (error.message === "WALLET_NAME_EXISTS") {
+      if (
+        error.message === "WALLET_NAME_EXISTS" ||
+        error.message === "WALLET_LIMIT_REACHED"
+      ) {
         throw error;
       }
-      throw new Error("INTERNAL_SERVER_ERROR");
     }
   }
   // 3. Service: getWalletById

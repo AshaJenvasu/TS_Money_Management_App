@@ -71,7 +71,8 @@ export const createWalletRoute = createRoute({
     },
 
     409: {
-      description: "Wallet name already exists",
+      description:
+        "Wallet name already exists or you can create up to 4 wallets only",
     },
   },
 });
@@ -263,6 +264,9 @@ walletController.openapi(createWalletRoute, async (c) => {
 
     if (error.message === "WALLET_NAME_EXISTS") {
       return c.json({ message: "Wallet name already exists" }, 409);
+    }
+    if (error.message === "WALLET_LIMIT_REACHED") {
+      return c.json({ message: "You can create up to 4 wallets only" }, 409);
     }
     throw error;
   }

@@ -27,4 +27,15 @@ export const walletService = {
     );
     return response.data;
   },
+
+  // แก้ไขชื่อ Wallet
+  updateWallet: async (walletId: string, name: string): Promise<Wallet> => {
+    const response = await api.put<Wallet>(`/wallets/${walletId}`, { name });
+    return response.data;
+  },
+
+  // ลบ Wallet
+  deleteWallet: async (walletId: string): Promise<void> => {
+    await api.delete(`/wallets/${walletId}`);
+  },
 };

@@ -90,4 +90,13 @@ export class WalletRepository {
       totalExpense,
     };
   }
+
+  // 8. นับจํานวน Wallet ของผู้ใช้
+  static async countByUserId(userId: bigint) {
+    return await prisma.wallet.count({
+      where: {
+        userId,
+      },
+    });
+  }
 }

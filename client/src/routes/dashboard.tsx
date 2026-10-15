@@ -148,7 +148,7 @@ function DashboardPage() {
         <section className="relative mt-7 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#7775E8] via-[#A18AE8] to-[#F0A9CF] p-6 text-white shadow-lg shadow-purple-200/60">
           <div className="absolute -right-8 -top-10 size-36 rounded-full bg-white/10" />
           <div className="absolute -bottom-12 right-16 size-28 rounded-full bg-white/10" />
-          <div className="absolute right-22 top-6 z-10">
+          <div className="absolute right-10 top-6 z-10 sm:right-6 md:right-22">
             <DashboardMascot />
           </div>
           <div className="relative">
@@ -159,7 +159,7 @@ function DashboardPage() {
 
               <button
                 type="button"
-                className="btn btn-ghost btn-circle btn-sm text-white hover:bg-white/20"
+                className="btn btn-ghost btn-circle btn-sm text-white hover:bg-white/20 "
                 onClick={() => setIsBalanceVisible((visible) => !visible)}
                 aria-label={isBalanceVisible ? "ซ่อนยอดเงิน" : "แสดงยอดเงิน"}
               >
@@ -282,17 +282,27 @@ function DashboardPage() {
                 </p>
               </div>
             </div>
+            <div className="flex flex-col items-start gap-2">
+              <button
+                type="button"
+                className="btn btn-sm rounded-full border-0 bg-[#7566C7] px-4 text-white shadow-sm hover:bg-[#6356B8]  disabled:bg-base-300 disabled:text-base-content/40
+              disabled:cursor-not-allowed disabled:shadow-none"
+                disabled={wallets.length >= 4}
+                onClick={() => {
+            
+                }}
+              >
+                <Plus size={16} />
+                เพิ่มกระเป๋า
+              </button>
 
-            <button
-              type="button"
-              className="btn btn-sm rounded-full border-0 bg-[#7566C7] px-4 text-white shadow-sm hover:bg-[#6356B8]"
-              onClick={() => {
-                // TODO: เชื่อมไปหน้า Create Wallet
-              }}
-            >
-              <Plus size={16} />
-              เพิ่มกระเป๋า
-            </button>
+              {/* {wallets.length >= 4 && (
+                <p className="flex items-center gap-1 text-xs font-semibold text-[#991B1B]">
+                  <Info size={14} />
+                  เพิ่มกระเป๋าได้สูงสุด 4 ใบ
+                </p>
+              )} */}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

@@ -7,16 +7,18 @@ import {
 } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuthStore } from "../stores/useAuthStore";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { authService } from "../api/auth.services";
 import { isAxiosError } from "axios";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { Menu, X } from "lucide-react";
 
 // 1. Instance ของ TanStack Query
 export const queryClient = new QueryClient();
 
 // Component หลักสำหรับ Root
 function RootLayout() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, token, logout, setAuth } = useAuthStore();
   const navigate = useNavigate();
 
@@ -65,100 +67,189 @@ function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-[#141A36] text-white">
         {/* Navbar สไตล์อนิเมะ เข้าธีม Money App */}
-        <header className="sticky top-0 z-50 flex h-[60px] w-full items-center justify-between border-b border-[#BFD3F3]/15 bg-[#141A36] px-7">
-          {/* โลโก้ฝั่งซ้าย */}
-          <div className="flex items-center gap-2.5 no-underline">
-            <span className="text-xl">🗻</span>
-            <span className="font-['Caveat',_'Mali',_cursive] text-2xl font-bold tracking-wide text-white">
-              MONEY APP
-            </span>
+
+        <header className="sticky top-0 z-50 w-full border-b border-[#BFD3F3]/15 bg-[#141A36]">
+          <div className="flex h-[60px] items-center justify-between gap-3 px-3 sm:px-5 lg:px-7">
+            {/* Logo */}
+            <Link
+              to={token || user ? "/dashboard" : "/login"}
+              onClick={() => setIsMenuOpen(false)}
+              className="flex shrink-0 items-center gap-2 no-underline"
+            >
+              <span className="text-xl">🗻</span>
+              <span className="font-['Caveat',_'Mali',_cursive] text-xl font-bold tracking-wide text-white sm:text-2xl">
+                MONEY APP
+              </span>
+            </Link>
+
+            {/* Desktop Navigation */}
+            {user || token ? (
+              <div className="hidden items-center gap-3 md:flex">
+                <nav className="flex items-center gap-2">
+                  <Link
+                    to="/dashboard"
+                    className="rounded-full bg-[#5568E0] px-4 py-2 text-sm font-semibold text-white no-underline transition hover:bg-[#6879F0]"
+                  >
+                    Dashboard
+                  </Link>
+
+                  <button
+                    onClick={() => alert("ยังไม่ได้ทำนะจ้ะ")}
+                    className="cursor-pointer rounded-full border border-[#5568E0]/50 px-4 py-2 text-sm font-semibold text-[#BFD3F3] transition hover:bg-[#5568E0]/20"
+                  >
+                    Wallets
+                  </button>
+
+                  <button
+                    onClick={() => alert("ยังไม่ได้ทำนะจ้ะ")}
+                    className="cursor-pointer rounded-full border border-[#5568E0]/50 px-4 py-2 text-sm font-semibold text-[#BFD3F3] transition hover:bg-[#5568E0]/20"
+                  >
+                    Investment
+                  </button>
+                </nav>
+
+                <div className="flex items-center gap-2 rounded-full border border-[#BFD3F3]/25 bg-[#1E2A66]/60 px-3.5 py-1.5 text-xs font-['Mali']">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5568E0] text-white">
+                    <svg
+                      className="h-3.5 w-3.5 fill-current"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                  </div>
+                  <span className="max-w-[150px] truncate font-semibold text-white">
+                    {(user as { username?: string; email?: string })
+                      ?.username ||
+                      (user as { email?: string })?.email ||
+                      "ผู้ใช้งาน"}
+                  </span>
+                </div>
+
+                <button
+                  onClick={handleLogout}
+                  className="cursor-pointer rounded-full border border-[#F0669A]/40 bg-[#F0669A]/20 px-3.5 py-1.5 text-xs font-semibold text-[#FFB3CD] transition hover:bg-[#F0669A] hover:text-white"
+                >
+                  ออกจากระบบ
+                </button>
+              </div>
+            ) : (
+              <nav className="hidden items-center gap-1 rounded-full border border-[#BFD3F3]/25 bg-[#1E2A66]/60 p-1 md:flex">
+                <Link
+                  to="/login"
+                  activeProps={{
+                    className:
+                      "bg-[#5568E0] text-white shadow-[0_2px_10px_rgba(85,104,224,0.5)]",
+                  }}
+                  inactiveProps={{ className: "bg-transparent text-[#A9B8EA]" }}
+                  className="rounded-full px-4 py-1.5 font-['Mali'] text-xs font-semibold no-underline transition-all"
+                >
+                  เข้าสู่ระบบ
+                </Link>
+                <Link
+                  to="/register"
+                  activeProps={{
+                    className:
+                      "bg-[#F0669A] text-white shadow-[0_2px_10px_rgba(240,102,154,0.5)]",
+                  }}
+                  inactiveProps={{ className: "bg-transparent text-[#A9B8EA]" }}
+                  className="rounded-full px-4 py-1.5 font-['Mali'] text-xs font-semibold no-underline transition-all"
+                >
+                  สมัครสมาชิก
+                </Link>
+              </nav>
+            )}
+
+            {/* Mobile Menu Button */}
+            <button
+              type="button"
+              aria-label={isMenuOpen ? "ปิดเมนู" : "เปิดเมนู"}
+              aria-expanded={isMenuOpen}
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#BFD3F3]/20 text-[#BFD3F3] transition hover:bg-[#5568E0]/20 md:hidden"
+            >
+              {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
           </div>
 
-          {/* เมนูหลัก แสดงเฉพาะผู้ใช้ที่ล็อกอินแล้ว */}
-          {user || token ? (
-            <nav className="flex items-center gap-2">
-              {/* ปุ่มไปหน้า Dashboard */}
-              <Link
-                to="/dashboard"
-                className="rounded-full bg-[#5568E0] px-4 py-2 text-sm font-semibold text-white no-underline transition-all hover:bg-[#6879F0]"
-              >
-                Dashboard
-              </Link>
+          {/* Mobile Dropdown */}
+          {isMenuOpen && (
+            <div className="border-t border-[#BFD3F3]/15 bg-[#141A36] px-4 py-4 md:hidden">
+              {user || token ? (
+                <div className="flex flex-col gap-2">
+                  <div className="mb-2 flex items-center gap-3 rounded-xl border border-[#BFD3F3]/20 bg-[#1E2A66]/60 p-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#5568E0]">
+                      <svg
+                        className="h-4 w-4 fill-current text-white"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                      </svg>
+                    </div>
+                    <span className="break-all text-sm font-semibold text-white">
+                      {(user as { username?: string; email?: string })
+                        ?.username ||
+                        (user as { email?: string })?.email ||
+                        "ผู้ใช้งาน"}
+                    </span>
+                  </div>
 
-              {/* ปุ่ม Wallets สำหรับฟีเจอร์ที่ยังไม่พร้อม */}
-              <button
-                onClick={() => alert("ยังไม่ได้ทำนะจ้ะ")}
-                className="cursor-pointer rounded-full border border-[#5568E0]/50 px-4 py-2 text-sm font-semibold text-[#BFD3F3] transition-all hover:bg-[#5568E0]/20"
-              >
-                Wallets
-              </button>
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="rounded-xl bg-[#5568E0] px-4 py-3 text-sm font-semibold text-white no-underline"
+                  >
+                    Dashboard
+                  </Link>
 
-              {/* ปุ่ม Investment สำหรับฟีเจอร์ที่ยังไม่พร้อม */}
-              <button
-                onClick={() => alert("ยังไม่ได้ทำนะจ้ะ")}
-                className="cursor-pointer rounded-full border border-[#5568E0]/50 px-4 py-2 text-sm font-semibold text-[#BFD3F3] transition-all hover:bg-[#5568E0]/20"
-              >
-                Investment
-              </button>
-            </nav>
-          ) : null}
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      alert("ยังไม่ได้ทำนะจ้ะ");
+                    }}
+                    className="rounded-xl border border-[#5568E0]/50 px-4 py-3 text-left text-sm font-semibold text-[#BFD3F3]"
+                  >
+                    Wallets
+                  </button>
 
-          {/* ฝั่งขวา: เช็กสถานะการล็อกอิน */}
-          {user || token ? (
-            /* UI สำหรับผู้ใช้ที่ล็อกอินแล้ว */
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 rounded-full border border-[#BFD3F3]/25 bg-[#1E2A66]/60 px-3.5 py-1.5 text-xs font-['Mali']">
-                {/* ไอคอนหัวคนสไตล์ SVG */}
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5568E0] text-white">
-                  <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                  </svg>
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      alert("ยังไม่ได้ทำนะจ้ะ");
+                    }}
+                    className="rounded-xl border border-[#5568E0]/50 px-4 py-3 text-left text-sm font-semibold text-[#BFD3F3]"
+                  >
+                    Investment
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      void handleLogout();
+                    }}
+                    className="mt-2 rounded-xl border border-[#F0669A]/40 bg-[#F0669A]/15 px-4 py-3 text-left text-sm font-semibold text-[#FFB3CD] transition hover:bg-[#F0669A] hover:text-white"
+                  >
+                    ออกจากระบบ
+                  </button>
                 </div>
-                <span className="font-semibold text-white">
-                  {(user as { username?: string; email?: string })?.username ||
-                    user?.email ||
-                    "ผู้ใช้งาน"}
-                </span>
-              </div>
-
-              {/* ปุ่ม Logout */}
-              <button
-                onClick={handleLogout}
-                className="rounded-full bg-[#F0669A]/20 hover:bg-[#F0669A] border border-[#F0669A]/40 px-3.5 py-1.5 font-['Mali'] text-xs font-semibold text-[#FFB3CD] hover:text-white transition-all cursor-pointer"
-              >
-                ออกจากระบบ
-              </button>
+              ) : (
+                <nav className="flex flex-col gap-2">
+                  <Link
+                    to="/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="rounded-xl border border-[#5568E0]/50 px-4 py-3 text-sm font-semibold text-[#BFD3F3] no-underline"
+                  >
+                    เข้าสู่ระบบ
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="rounded-xl bg-[#F0669A] px-4 py-3 text-sm font-semibold text-white no-underline"
+                  >
+                    สมัครสมาชิก
+                  </Link>
+                </nav>
+              )}
             </div>
-          ) : (
-            /* ปุ่มสลับ Login / Register ฝั่งขวา (เดิม) */
-            <nav className="flex items-center gap-1 rounded-full border border-[#BFD3F3]/25 bg-[#1E2A66]/60 p-1">
-              <Link
-                to="/login"
-                activeProps={{
-                  className:
-                    "bg-[#5568E0] text-white shadow-[0_2px_10px_rgba(85,104,224,0.5)]",
-                }}
-                inactiveProps={{
-                  className: "bg-transparent text-[#A9B8EA]",
-                }}
-                className="rounded-full px-4 py-1.5 font-['Mali'] text-xs font-semibold no-underline transition-all"
-              >
-                เข้าสู่ระบบ
-              </Link>
-              <Link
-                to="/register"
-                activeProps={{
-                  className:
-                    "bg-[#F0669A] text-white shadow-[0_2px_10px_rgba(240,102,154,0.5)]",
-                }}
-                inactiveProps={{
-                  className: "bg-transparent text-[#A9B8EA]",
-                }}
-                className="rounded-full px-4 py-1.5 font-['Mali'] text-xs font-semibold no-underline transition-all"
-              >
-                สมัครสมาชิก
-              </Link>
-            </nav>
           )}
         </header>
 
