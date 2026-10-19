@@ -24,6 +24,21 @@ export interface PaginatedTransactionsResponse {
   pagination: TransactionPagination;
 }
 
+// กำหนดข้อมูลที่ส่งไปแก้ไข Transaction
+export interface UpdateTransactionPayload {
+  transaction_type: "income" | "expense";
+  amount: string;
+  note: string | null;
+  transaction_date: string;
+}
+
+export interface CreateTransactionPayload {
+  transaction_type: "income" | "expense";
+  amount: string;
+  note: string | null;
+  transaction_date: string;
+}
+
 export const transactionService = {
   // ดึง Transactions ตาม Wallet ID (Wallet Detail)
   getTransactions: async (walletId: string): Promise<Transaction[]> => {
@@ -44,6 +59,39 @@ export const transactionService = {
       {
         params: { page, limit },
       },
+    );
+
+    return response.data;
+  },
+
+  // update Transaction
+  updateTransaction: async (
+    walletId: string,
+    transactionId: string,
+    payload: UpdateTransactionPayload,
+  ): Promise<Transaction> => {
+    const response = await api.put<Transaction>(
+      `/wallets/${walletId}/transactions/${transactionId}`,
+      payload,
+    );
+    return response.data;
+  },
+
+  // delete Transaction
+  deleteTransaction: async (
+    walletId: string,
+    transactionId: string,
+  ): Promise<void> => {
+    await api.delete(`/wallets/${walletId}/transactions/${transactionId}`);
+  },
+
+  createTransaction: async (
+    walletId: string,
+    payload: CreateTransactionPayload,
+  ): Promise<Transaction> => {
+    const response = await api.post<Transaction>(
+      `/wallets/${walletId}/transactions`,
+      payload,
     );
 
     return response.data;

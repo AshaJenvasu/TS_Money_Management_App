@@ -4,7 +4,7 @@ import { DashboardSkeleton } from "../components/dashboard/DashboardSkeleton";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useWalletsQuery } from "../hooks/useWalletsQuery";
 import { useAllTransactionsQuery } from "../hooks/useTransactionsQuery";
-import { WalletCard } from "../components/dashboard/WalletCard";
+import { WalletCard } from "../components/wallets/WalletCard";
 import { PortfolioCard } from "../components/dashboard/PortfolioCard";
 import { useState } from "react";
 import { useQueries } from "@tanstack/react-query";
@@ -12,10 +12,16 @@ import { walletService } from "../services/wallet.services";
 import { Eye, EyeOff, WalletCards, Plus, PieChart } from "lucide-react";
 import { DashboardScene } from "../components/dashboard/DashboardScene";
 import { DashboardMascot } from "../components/dashboard/DashboardMascot";
+import TransactionCard from "../components/transactions/TransactionCard";
+import TransactionEditDialog from "../components/transactions/TransactionEditDialog";
+import type { Transaction } from "../services/transaction.services";
+import TransactionDeleteDialog from "../components/transactions/TransactionDeleteDialog";
+import TransactionCreateDialog from "../components/transactions/TransactionCreateDialog";
 import { Wallet as WalletIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 import axios from "axios";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { formatCurrency } from "../utils/formatCurrency";
 
 // หน้า Dashboard
 export const Route = createFileRoute("/dashboard")({
@@ -39,6 +45,15 @@ function DashboardPage() {
   const [validationError, setValidationError] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+  // ควบคุมการเปิดฟอร์มสร้างธุรกรรม
+  const [isCreateTransactionOpen, setIsCreateTransactionOpen] = useState(false);
+  // เก็บรายการธุรกรรมที่ผู้ใช้เลือกแก้ไข
+  const [editingTransaction, setEditingTransaction] =
+    useState<Transaction | null>(null);
+
+  // เก็บรายการธุรกรรมที่ผู้ใช้เลือกจะลบ
+  const [deletingTransaction, setDeletingTransaction] =
+    useState<Transaction | null>(null);
 
   // ควบคุมการเปิด-ปิด Popup
   const [isTransactionsOpen, setIsTransactionsOpen] = useState(false);
@@ -139,13 +154,6 @@ function DashboardPage() {
     isPending: isTransactionsPending,
     isError: isTransactionsError,
   } = useAllTransactionsQuery(transactionPage, 5);
-
-  // คํานวณยอดเงินทั้งหมด
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("th-TH", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
 
   if (isPending) {
     return <DashboardSkeleton />;
@@ -437,58 +445,20 @@ function DashboardPage() {
               </div>
             ) : (
               recentTransactions.map((transaction) => {
+                // ค้นหา Wallet ของ Transaction นี้
                 const wallet = wallets.find(
                   (item) => item.id === transaction.wallet_id,
                 );
 
-                const isIncome = transaction.transaction_type === "income";
-
-                const date = new Date(transaction.transaction_date);
-                const isToday =
-                  date.toDateString() === new Date().toDateString();
-
                 return (
-                  <div
+                  <TransactionCard
                     key={transaction.id}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white/70 p-4 shadow-sm"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div
-                        className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
-                          isIncome
-                            ? "bg-[#E2F5E9] text-[#399568]"
-                            : "bg-[#FCE7EF] text-[#D85D8B]"
-                        }`}
-                      >
-                        {isIncome ? "+" : "−"}
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold text-[#39365F]">
-                          {transaction.note || "รายการธุรกรรม"}
-                        </p>
-                        <p className="mt-1 text-xs text-[#8986A8]">
-                          {wallet?.name ?? "Wallet"} ·{" "}
-                          {isToday
-                            ? "วันนี้"
-                            : date.toLocaleDateString("th-TH", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                        </p>
-                      </div>
-                    </div>
-
-                    <p
-                      className={`shrink-0 text-sm font-bold ${
-                        isIncome ? "text-[#399568]" : "text-[#D85D8B]"
-                      }`}
-                    >
-                      {isIncome ? "+" : "−"}฿
-                      {formatCurrency(Number(transaction.amount))}
-                    </p>
-                  </div>
+                    transaction={transaction}
+                    walletName={wallet?.name ?? "Wallet"}
+                    showTodayLabel
+                    onEdit={(item) => setEditingTransaction(item)}
+                    onDelete={(item) => setDeletingTransaction(item)}
+                  />
                 );
               })
             )}
@@ -544,54 +514,19 @@ function DashboardPage() {
                     </div>
                   ) : (
                     allTransactionsResponse.data.map((transaction) => {
+                      // ค้นหา Wallet ที่เป็นเจ้าของ Transaction
                       const wallet = wallets.find(
                         (item) => item.id === transaction.wallet_id,
                       );
 
-                      const isIncome =
-                        transaction.transaction_type === "income";
-                      const date = new Date(transaction.transaction_date);
-
                       return (
-                        <div
+                        <TransactionCard
                           key={transaction.id}
-                          className="flex items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white/80 p-4"
-                        >
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div
-                              className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
-                                isIncome
-                                  ? "bg-[#E2F5E9] text-[#399568]"
-                                  : "bg-[#FCE7EF] text-[#D85D8B]"
-                              }`}
-                            >
-                              {isIncome ? "+" : "−"}
-                            </div>
-
-                            <div className="min-w-0">
-                              <p className="truncate font-semibold text-[#39365F]">
-                                {transaction.note || "รายการธุรกรรม"}
-                              </p>
-                              <p className="mt-1 text-xs text-[#8986A8]">
-                                {wallet?.name ?? "Wallet"} ·{" "}
-                                {date.toLocaleDateString("th-TH", {
-                                  day: "numeric",
-                                  month: "short",
-                                  year: "numeric",
-                                })}
-                              </p>
-                            </div>
-                          </div>
-
-                          <p
-                            className={`shrink-0 text-sm font-bold ${
-                              isIncome ? "text-[#399568]" : "text-[#D85D8B]"
-                            }`}
-                          >
-                            {isIncome ? "+" : "−"}฿
-                            {formatCurrency(Number(transaction.amount))}
-                          </p>
-                        </div>
+                          transaction={transaction}
+                          walletName={wallet?.name ?? "Wallet"}
+                          onEdit={(item) => setEditingTransaction(item)}
+                          onDelete={(item) => setDeletingTransaction(item)}
+                        />
                       );
                     })
                   )}
@@ -739,6 +674,44 @@ function DashboardPage() {
             </div>,
             document.body,
           )}
+        {/* เปิด Dialog สำหรับแก้ไขธุรกรรมที่เลือก */}
+        {editingTransaction && (
+          <TransactionEditDialog
+            transaction={editingTransaction}
+            wallets={wallets}
+            onClose={() => setEditingTransaction(null)}
+          />
+        )}
+        {/* เปิด Dialog ยืนยันการลบธุรกรรม */}
+        {deletingTransaction && (
+          <TransactionDeleteDialog
+            transaction={deletingTransaction}
+            walletName={
+              wallets.find(
+                (wallet) => wallet.id === deletingTransaction.wallet_id,
+              )?.name ?? "ไม่พบ Wallet"
+            }
+            onClose={() => setDeletingTransaction(null)}
+          />
+        )}
+        {/* ปุ่มเพิ่มธุรกรรมที่ติดอยู่กับหน้าจอ */}
+        <button
+          type="button"
+          aria-label="เพิ่มธุรกรรม"
+          title="เพิ่มธุรกรรม"
+          onClick={() => setIsCreateTransactionOpen(true)}
+          className="fixed bottom-6 right-6 z-50 flex size-14 items-center justify-center rounded-full bg-[#7566C7] text-white shadow-lg transition hover:scale-105 hover:bg-[#6356B8] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#7566C7]/40 sm:bottom-8 sm:right-8"
+        >
+          <Plus size={28} />
+        </button>
+
+        {/* แสดงฟอร์มสร้างธุรกรรมเมื่อกดปุ่มบวก */}
+        {isCreateTransactionOpen && (
+          <TransactionCreateDialog
+            wallets={wallets}
+            onClose={() => setIsCreateTransactionOpen(false)}
+          />
+        )}
       </main>
     </div>
   );

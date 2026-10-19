@@ -1,5 +1,14 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
-import { transactionService } from "../services/transaction.services";
+import {
+  useQueries,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  transactionService,
+  type UpdateTransactionPayload,
+  type CreateTransactionPayload,
+} from "../services/transaction.services";
 
 export const useTransactionsQuery = (walletIds: string[]) => {
   return useQueries({
@@ -18,6 +27,87 @@ export const useAllTransactionsQuery = (
   return useQuery({
     queryKey: ["transactions", "all", page, limit],
     queryFn: () => transactionService.getAllTransactions(page, limit),
+  });
+};
+
+// เชื่อม Mutation กับ Cache ของรายการธุรกรรม
+export const useUpdateTransactionMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      walletId,
+      transactionId,
+      payload,
+    }: {
+      walletId: string;
+      transactionId: string;
+      payload: UpdateTransactionPayload;
+    }) =>
+      transactionService.updateTransaction(walletId, transactionId, payload),
+    onSuccess: async () => {
+      // รีเฟรชรายการธุรกรรมทั้งหมด
+      await queryClient.invalidateQueries({
+        queryKey: ["transactions"],
+      });
+
+      // รีเฟรช Wallet และยอดเงินของทุก Wallet
+      await queryClient.invalidateQueries({
+        queryKey: ["wallets"],
+      });
+    },
+  });
+};
+
+// ลบ Transaction และรีเฟรชข้อมูลที่เกี่ยวข้อง
+export const useDeleteTransactionMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      walletId,
+      transactionId,
+    }: {
+      walletId: string;
+      transactionId: string;
+    }) => transactionService.deleteTransaction(walletId, transactionId),
+    onSuccess: async () => {
+      // รีเฟรชรายการธุรกรรมทั้งหมด
+      await queryClient.invalidateQueries({
+        queryKey: ["transactions"],
+      });
+
+      // รีเฟรช Wallet และยอดเงินของทุก Wallet
+      await queryClient.invalidateQueries({
+        queryKey: ["wallets"],
+      });
+    },
+  });
+};
+
+export const useCreateTransactionMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      walletId,
+      payload,
+    }: {
+      walletId: string;
+      payload: CreateTransactionPayload;
+    }) => transactionService.createTransaction(walletId, payload),
+
+    onSuccess: async () => {
+      // รีเฟรชรายการธุรกรรมทุกชุดหลังสร้างสำเร็จ
+      await queryClient.invalidateQueries({
+        queryKey: ["transactions"],
+      });
+
+      // รีเฟรชข้อมูล Wallet หากยอดเงินคงเหลืออยู่ใน Cache นี้
+      await queryClient.invalidateQueries({
+        queryKey: ["wallets"],
+      });
+    },
   });
 };
 
