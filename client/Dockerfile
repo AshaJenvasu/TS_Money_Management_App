@@ -1,21 +1,45 @@
-# Build React app ด้วย Bun แทน Node/npm
-FROM oven/bun:1-alpine AS builder
-
+# Base image ให้ทุก stage ใช้ร่วมกัน
+FROM oven/bun:1-alpine AS base
 WORKDIR /app
 
-# Copy package.json และ lockfile ก่อนแยกจาก source เพื่อให้ Docker cache layer นี้ไว้ ไม่ต้อง install ใหม่ทุกครั้งที่โค้ดเปลี่ยน
-COPY package.json bun.lock* ./
+
+# ติดตั้ง dependencies ทั้งหมด (รวม dev) เพราะ prisma CLI อยู่ใน devDependencies ต้องใช้ตอน generate
+FROM base AS deps
+COPY package.json bun.lock ./
+COPY prisma ./prisma
 RUN bun install --frozen-lockfile
 
-# Copy source ที่เหลือแล้ว build เป็น static files
+
+# generate Prisma Client จาก schema
+FROM deps AS build
 COPY . .
-RUN bun run build
+ENV DATABASE_URL="postgresql://user:password@localhost:5432/db"
+RUN bunx prisma generate
 
 
-# Serve static files ด้วย nginx (image เบา ไม่มี Bun/source code ติดไปด้วย)
-FROM nginx:alpine
+# ติดตั้งเฉพาะ production dependencies แยกต่างหาก ไม่มี devDependencies ติดมาด้วยเลย
+FROM base AS prod-deps
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile --production
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/dist /usr/share/nginx/html
 
-EXPOSE 80
+# Production image: ใช้ node_modules สะอาดจาก prod-deps แล้วเอา Prisma Client ที่ generate ไว้มาแปะทับ
+FROM base AS production
+ENV NODE_ENV=production
+
+# สร้าง user แยกจาก root ไว้รันแอพ ลดสิทธิ์ถ้า container โดนเจาะ
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/src ./src
+COPY --from=build /app/package.json ./package.json
+
+# เปลี่ยนเจ้าของไฟล์ให้ user ที่สร้างไว้ แล้วสลับมารันด้วย user นี้แทน root
+RUN chown -R appuser:appgroup /app
+USER appuser
+
+EXPOSE 3000
+
+CMD ["bun", "run", "src/index.ts"]
