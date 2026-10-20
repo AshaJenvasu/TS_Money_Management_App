@@ -24,7 +24,7 @@ const getAssetsRoute = createRoute({
   path: "/assets",
   tags: ["Asset"],
   summary: "Get user assets",
-  description: "ดึงรายการ Asset ทั้งหมดที่เป็นของผู้ใช้งานที่กำลังล็อกอินอยู่",
+  description: "ดึงรายการ Asset  ทั้งหมดที่เป็นของผู้ใช้งานที่กำลังล็อกอินอยู่",
   responses: {
     200: {
       content: { "application/json": { schema: AssetListResponseSchema } },
