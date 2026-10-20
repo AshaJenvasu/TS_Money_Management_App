@@ -171,7 +171,7 @@ export default function TransactionEditDialog({
               value={note}
               onChange={(event) => setNote(event.target.value)}
               maxLength={500}
-              placeholder="เพิ่มหมายเหตุ (ไม่บังคับ)"
+              placeholder="เพิ่มหมายเหตุ"
               disabled={updateMutation.isPending}
             />
           </label>

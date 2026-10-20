@@ -1,5 +1,3 @@
-import React from "react";
-
 export function MascotCat() {
   return (
     <svg className="mascot" viewBox="0 0 160 140" aria-hidden="true">

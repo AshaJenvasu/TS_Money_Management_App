@@ -1,0 +1,37 @@
+name: Build and Push Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "server/**"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      # ดึงโค้ดล่าสุดจาก repo มาไว้ใน runner
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # เอา git commit sha แบบสั้นมาตั้งเป็น tag เก็บประวัติ
+      - name: Get short SHA
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      # login เข้า Docker Hub ด้วย credential ที่เก็บใน GitHub Secrets (ไม่โผล่ใน log แน่นอน)
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # build image จาก server/ แล้ว push ขึ้น Docker Hub ทั้ง 2 tag พร้อมกัน
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./server
+          push: true
+          tags: |
+            ashachaiyawat/money-app-backend:latest
+            ashachaiyawat/money-app-backend:${{ steps.vars.outputs.sha_short }}

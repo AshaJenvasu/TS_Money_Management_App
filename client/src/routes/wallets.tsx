@@ -1,14 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useWalletsQuery } from "../hooks/useWalletsQuery";
 import { WalletCard } from "../components/wallets/WalletCard";
-import { Wallet as WalletIcon } from "lucide-react";
+import { Wallet as WalletIcon, Plus } from "lucide-react";
 import { useState } from "react";
 import { FloatingAddTransactionButton } from "../components/transactions/FloatingAddTransactionButton";
 import TransactionCreateDialog from "../components/transactions/TransactionCreateDialog";
+import { useAllTransactionsQuery } from "../hooks/useTransactionsQuery";
+import TransactionCard from "../components/transactions/TransactionCard";
+import TransactionEditDialog from "../components/transactions/TransactionEditDialog";
+import TransactionDeleteDialog from "../components/transactions/TransactionDeleteDialog";
+import type { Transaction } from "../services/transaction.services";
 import { WalletsScene } from "../components/wallets/WalletsScene";
 import axios from "axios";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { walletService } from "../services/wallet.services";
+import { createPortal } from "react-dom";
 
 // แสดงรายการ Wallet ทั้งหมดของผู้ใช้
 // eslint-disable-next-line react-refresh/only-export-components
@@ -25,6 +31,21 @@ function WalletsPage() {
   const [walletName, setWalletName] = useState("");
   const [validationError, setValidationError] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  // เก็บธุรกรรมที่เลือกแก้ไขหรือลบ
+  const [editingTransaction, setEditingTransaction] =
+    useState<Transaction | null>(null);
+  const [deletingTransaction, setDeletingTransaction] =
+    useState<Transaction | null>(null);
+
+  // เก็บหน้าปัจจุบันของรายการธุรกรรม
+  const [transactionPage, setTransactionPage] = useState(1);
+
+  // ดึงธุรกรรม 5 รายการต่อหน้า จากทุก Wallet
+  const {
+    data: allTransactionsResponse,
+    isPending: isTransactionsPending,
+    isError: isTransactionsError,
+  } = useAllTransactionsQuery(transactionPage, 5);
 
   // สร้างกระเป๋าและอัปเดตรายการหลังบันทึกสำเร็จ
   const createMutation = useMutation({
@@ -102,6 +123,27 @@ function WalletsPage() {
               <p className="mt-2 max-w-sm text-sm leading-6 text-[#716D98] sm:text-base">
                 ทุกเป้าหมายทางการเงิน เริ่มต้นได้จากกระเป๋าใบเล็ก ๆ ของเธอ
               </p>
+
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-[#716D98]">
+                  {(wallets ?? []).length} จาก 4 กระเป๋า
+                </p>
+
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#7566C7] px-5 py-3 text-sm font-semibold text-white shadow-md shadow-purple-200/60 transition hover:-translate-y-0.5 hover:bg-[#6356B8] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#7566C7]/30 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={isPending || isError || (wallets ?? []).length >= 4}
+                  onClick={() => {
+                    setWalletName("");
+                    setValidationError("");
+                    setErrorMessage("");
+                    setIsCreateOpen(true);
+                  }}
+                >
+                  <Plus size={18} />
+                  สร้างกระเป๋า
+                </button>
+              </div>
             </header>
           </div>
 
@@ -180,6 +222,116 @@ function WalletsPage() {
             ))}
           </div>
         )}
+        {/* รายการธุรกรรมทั้งหมด */}
+        <section className="relative z-10 mt-10">
+          <div className="mb-5">
+            <h2 className="text-xl font-bold text-[#39365F]">
+              รายการธุรกรรมทั้งหมด
+            </h2>
+            <p className="mt-1 text-sm text-[#716D98]">
+              รวมความเคลื่อนไหวจากทุกกระเป๋าเงินของเธอ
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {isTransactionsPending ? (
+              <div className="rounded-2xl border border-white/70 bg-white/60 p-6 text-center text-sm text-[#8986A8]">
+                กำลังโหลดรายการธุรกรรม...
+              </div>
+            ) : isTransactionsError ? (
+              <div className="rounded-2xl border border-red-200 bg-white/70 p-6 text-center">
+                <p className="text-sm text-red-500">
+                  โหลดรายการธุรกรรมไม่สำเร็จ
+                </p>
+              </div>
+            ) : (allTransactionsResponse?.data ?? []).length === 0 ? (
+              <div className="rounded-2xl border border-white/70 bg-white/60 p-8 text-center">
+                <p className="font-semibold text-[#39365F]">
+                  ยังไม่มีรายการธุรกรรม
+                </p>
+                <p className="mt-2 text-sm text-[#8986A8]">
+                  เมื่อเธอเพิ่มรายรับหรือรายจ่าย รายการจะแสดงที่นี่
+                </p>
+              </div>
+            ) : (
+              allTransactionsResponse!.data.map((transaction) => {
+                // ค้นหาชื่อ Wallet ที่เป็นเจ้าของธุรกรรม
+                const wallet = wallets?.find(
+                  (item) => item.id === transaction.wallet_id,
+                );
+
+                return (
+                  <TransactionCard
+                    key={transaction.id}
+                    transaction={transaction}
+                    walletName={wallet?.name ?? "Wallet"}
+                    showTodayLabel
+                    onEdit={(item) => setEditingTransaction(item)}
+                    onDelete={(item) => setDeletingTransaction(item)}
+                  />
+                );
+              })
+            )}
+          </div>
+
+          {/* ปุ่มเปลี่ยนหน้ารายการธุรกรรม */}
+          {!isTransactionsPending &&
+            !isTransactionsError &&
+            allTransactionsResponse &&
+            allTransactionsResponse.pagination.totalPages > 1 && (
+              <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white/60 p-3">
+                <button
+                  type="button"
+                  disabled={transactionPage <= 1}
+                  onClick={() =>
+                    setTransactionPage((page) => Math.max(1, page - 1))
+                  }
+                  className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#7566C7] transition hover:bg-[#EEEAFB] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  ← ก่อนหน้า
+                </button>
+
+                <span className="text-sm font-semibold text-[#39365F]">
+                  หน้า {allTransactionsResponse.pagination.page} /{" "}
+                  {allTransactionsResponse.pagination.totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={
+                    transactionPage >=
+                    allTransactionsResponse.pagination.totalPages
+                  }
+                  onClick={() => setTransactionPage((page) => page + 1)}
+                  className="rounded-full bg-[#7566C7] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#6356B8] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  ถัดไป →
+                </button>
+              </div>
+            )}
+
+          {/* Dialog แก้ไขธุรกรรม */}
+          {editingTransaction && (
+            <TransactionEditDialog
+              transaction={editingTransaction}
+              wallets={wallets ?? []}
+              onClose={() => setEditingTransaction(null)}
+            />
+          )}
+
+          {/* Dialog ยืนยันการลบธุรกรรม */}
+          {deletingTransaction && (
+            <TransactionDeleteDialog
+              transaction={deletingTransaction}
+              walletName={
+                wallets?.find(
+                  (wallet) => wallet.id === deletingTransaction.wallet_id,
+                )?.name ?? "ไม่พบ Wallet"
+              }
+              onClose={() => setDeletingTransaction(null)}
+            />
+          )}
+        </section>
       </div>
 
       {/* ปุ่มลอยสำหรับเพิ่มธุรกรรม */}
@@ -194,6 +346,113 @@ function WalletsPage() {
           onClose={() => setIsCreateTransactionOpen(false)}
         />
       )}
+      {/* Dialog สร้างกระเป๋าเงิน */}
+      {isCreateOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#39365F]/40 p-4 backdrop-blur-sm">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="create-wallet-title"
+              className="w-full max-w-md rounded-[28px] border border-white/70 bg-[#F8F6FF] p-6 shadow-2xl sm:p-8"
+            >
+              <div className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-[#EAE5FF] text-[#7566C7]">
+                <WalletIcon size={28} />
+              </div>
+
+              <h2
+                id="create-wallet-title"
+                className="text-2xl font-bold text-[#39365F]"
+              >
+                สร้างกระเป๋าเงิน
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-[#716D98]">
+                ตั้งชื่อกระเป๋าใบใหม่ เพื่อเริ่มจัดการเงินของเธอกัน
+              </p>
+
+              <form
+                className="mt-6"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleCreateWallet();
+                }}
+              >
+                <label
+                  htmlFor="wallet-name"
+                  className="mb-2 block text-sm font-semibold text-[#39365F]"
+                >
+                  ชื่อกระเป๋า
+                </label>
+
+                <input
+                  id="wallet-name"
+                  type="text"
+                  value={walletName}
+                  maxLength={100}
+                  autoFocus
+                  disabled={createMutation.isPending}
+                  placeholder="เช่น เงินเก็บ, ค่าใช้จ่ายประจำวัน"
+                  aria-invalid={Boolean(validationError)}
+                  className="min-h-12 w-full rounded-2xl border border-[#D9D2F0] bg-white px-4 py-3 text-[#39365F] outline-none transition placeholder:text-[#AAA4C5] focus:border-[#9586DF] focus:ring-4 focus:ring-[#9586DF]/20 disabled:opacity-60"
+                  onChange={(event) => {
+                    setWalletName(event.target.value);
+                    setValidationError("");
+                    setErrorMessage("");
+                  }}
+                />
+
+                {validationError && (
+                  <p className="mt-2 text-sm text-red-500">{validationError}</p>
+                )}
+
+                {errorMessage && (
+                  <p role="alert" className="mt-2 text-sm text-red-500">
+                    {errorMessage}
+                  </p>
+                )}
+
+                <p className="mt-2 text-right text-xs text-[#8986A8]">
+                  {walletName.length}/100 ตัวอักษร
+                </p>
+
+                <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    disabled={createMutation.isPending}
+                    className="min-h-11 rounded-full border border-[#D9D2F0] px-5 py-3 text-sm font-semibold text-[#716D98] transition hover:bg-[#EEEAFB] disabled:opacity-50"
+                    onClick={() => setIsCreateOpen(false)}
+                  >
+                    ยกเลิก
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={
+                      createMutation.isPending ||
+                      !walletName.trim() ||
+                      (wallets ?? []).length >= 4
+                    }
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#7566C7] px-5 py-3 text-sm font-semibold text-white shadow-md shadow-purple-200/60 transition hover:bg-[#6356B8] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {createMutation.isPending ? (
+                      <>
+                        <span className="loading loading-spinner loading-sm" />
+                        กำลังสร้าง...
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={18} />
+                        สร้างกระเป๋า
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body,
+        )}
     </section>
   );
 }
