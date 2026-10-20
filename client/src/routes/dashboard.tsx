@@ -17,6 +17,7 @@ import TransactionEditDialog from "../components/transactions/TransactionEditDia
 import type { Transaction } from "../services/transaction.services";
 import TransactionDeleteDialog from "../components/transactions/TransactionDeleteDialog";
 import TransactionCreateDialog from "../components/transactions/TransactionCreateDialog";
+import { FloatingAddTransactionButton } from "../components/transactions/FloatingAddTransactionButton";
 import { Wallet as WalletIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 import axios from "axios";
@@ -695,15 +696,9 @@ function DashboardPage() {
           />
         )}
         {/* ปุ่มเพิ่มธุรกรรมที่ติดอยู่กับหน้าจอ */}
-        <button
-          type="button"
-          aria-label="เพิ่มธุรกรรม"
-          title="เพิ่มธุรกรรม"
+        <FloatingAddTransactionButton
           onClick={() => setIsCreateTransactionOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex size-14 items-center justify-center rounded-full bg-[#7566C7] text-white shadow-lg transition hover:scale-105 hover:bg-[#6356B8] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#7566C7]/40 sm:bottom-8 sm:right-8"
-        >
-          <Plus size={28} />
-        </button>
+        />
 
         {/* แสดงฟอร์มสร้างธุรกรรมเมื่อกดปุ่มบวก */}
         {isCreateTransactionOpen && (

@@ -465,3 +465,24 @@ body {
     animation: none;
   }
 }
+
+/* ทำให้กลีบดอกไม้ลอยลงพร้อมแกว่งตามลม */
+@keyframes wallets-petal-fall {
+  0% {
+    transform: translate3d(0, -20px, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(var(--petal-drift), 145px, 0) rotate(180deg);
+  }
+  100% {
+    transform: translate3d(0, 320px, 0) rotate(360deg);
+  }
+}
+
+/* ปิดแอนิเมชันเมื่อผู้ใช้เลือกให้ลดการเคลื่อนไหว */
+@media (prefers-reduced-motion: reduce) {
+  .wallets-petal {
+    animation: none !important;
+    display: none;
+  }
+}

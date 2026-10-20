@@ -69,6 +69,7 @@ function RootLayout() {
         {/* Navbar สไตล์อนิเมะ เข้าธีม Money App */}
 
         <header className="sticky top-0 z-50 w-full border-b border-[#BFD3F3]/15 bg-[#141A36]">
+          {/* Navbar */}
           <div className="flex h-[60px] items-center justify-between gap-3 px-3 sm:px-5 lg:px-7">
             {/* Logo */}
             <Link
@@ -88,17 +89,31 @@ function RootLayout() {
                 <nav className="flex items-center gap-2">
                   <Link
                     to="/dashboard"
-                    className="rounded-full bg-[#5568E0] px-4 py-2 text-sm font-semibold text-white no-underline transition hover:bg-[#6879F0]"
+                    activeProps={{
+                      className: "bg-[#5568E0] text-white",
+                    }}
+                    inactiveProps={{
+                      className:
+                        "border border-[#5568E0]/50 text-[#BFD3F3] hover:bg-[#5568E0]/20",
+                    }}
+                    className="rounded-full px-4 py-2 text-sm font-semibold text-white no-underline transition hover:bg-[#6879F0]"
                   >
                     Dashboard
                   </Link>
 
-                  <button
-                    onClick={() => alert("ยังไม่ได้ทำนะจ้ะ")}
-                    className="cursor-pointer rounded-full border border-[#5568E0]/50 px-4 py-2 text-sm font-semibold text-[#BFD3F3] transition hover:bg-[#5568E0]/20"
+                  <Link
+                    to="/wallets"
+                    activeProps={{
+                      className: "bg-[#5568E0] text-white",
+                    }}
+                    inactiveProps={{
+                      className:
+                        "border border-[#5568E0]/50 text-[#BFD3F3] hover:bg-[#5568E0]/20",
+                    }}
+                    className="rounded-full px-4 py-2 text-sm font-semibold no-underline transition"
                   >
                     Wallets
-                  </button>
+                  </Link>
 
                   <button
                     onClick={() => alert("ยังไม่ได้ทำนะจ้ะ")}
@@ -196,20 +211,32 @@ function RootLayout() {
                   <Link
                     to="/dashboard"
                     onClick={() => setIsMenuOpen(false)}
-                    className="rounded-xl bg-[#5568E0] px-4 py-3 text-sm font-semibold text-white no-underline"
+                    className="rounded-xl px-4 py-3 text-sm font-semibold text-white no-underline"
+                    activeProps={{
+                      className: "bg-[#5568E0] text-white",
+                    }}
+                    inactiveProps={{
+                      className:
+                        "border border-[#5568E0]/50 text-[#BFD3F3] hover:bg-[#5568E0]/20",
+                    }}
                   >
                     Dashboard
                   </Link>
 
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      alert("ยังไม่ได้ทำนะจ้ะ");
+                  <Link
+                    to="/wallets"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="rounded-xl border border-[#5568E0]/50 px-4 py-3 text-left text-sm font-semibold text-[#BFD3F3] no-underline transition hover:bg-[#5568E0]/20"
+                    activeProps={{
+                      className: "bg-[#5568E0] text-white",
                     }}
-                    className="rounded-xl border border-[#5568E0]/50 px-4 py-3 text-left text-sm font-semibold text-[#BFD3F3]"
+                    inactiveProps={{
+                      className:
+                        "border border-[#5568E0]/50 text-[#BFD3F3] hover:bg-[#5568E0]/20",
+                    }}
                   >
                     Wallets
-                  </button>
+                  </Link>
 
                   <button
                     onClick={() => {
