@@ -15,7 +15,7 @@ export function DashboardMascot() {
       aria-label="เล่นกับแมว"
     >
       {/* Floating Coin */}
-      {/* <div className="absolute right-10 top-1 animate-bounce text-3xl">🪙</div> */}
+      {/* <div className="absolute right-10 top-1 animate-bounce text -3xl">🪙</div> */}
 
       {/* Cat */}
       <svg
