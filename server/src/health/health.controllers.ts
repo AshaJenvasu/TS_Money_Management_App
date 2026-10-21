@@ -19,7 +19,7 @@ healthController.openapi(getServerHealthRoute, (c) => {
 // 2. Handler สำหรับ Check Database Health
 healthController.openapi(getDatabaseHealthRoute, async (c) => {
   try {
-    // ใช้ $queryRaw ยิง query เบาๆ เพื่อทดสอบว่า  DB ยังตอบสนองไหม
+    // ใช้ $queryRaw ยิง query เบาๆ เพื่อทดสอบว่า   DB ยังตอบสนองไหม
     await prisma.$queryRaw`SELECT 1`;
 
     return c.json(
