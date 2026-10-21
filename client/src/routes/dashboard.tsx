@@ -194,7 +194,7 @@ function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#E9EAF8] px-0 py-0 sm:py-3">
       {/* กรอบหลักของ Dashboard */}
-      <main className="relative isolate mx-auto min-h-screen w-full max-w-[480px] overflow-hidden rounded-none bg-[#E3D9F6] px-5 pb-10 pt-5 shadow-xl sm:min-h-[800px] sm:rounded-[32px]">
+      <main className="relative isolate mx-auto min-h-screen w-full max-w-6xl overflow-hidden rounded-none bg-[#E3D9F6] px-5 pb-10 pt-5 shadow-xl sm:min-h-[800px] sm:rounded-[32px] sm:px-6 lg:px-8">
         <DashboardScene />
         {/* Header */}
         <header className="flex items-center justify-between">
@@ -235,8 +235,9 @@ function DashboardPage() {
             </div>
           </div>
         </section>
+        <div className="mt-7 grid gap-5">
         {/* Total Balance Card */}
-        <section className="relative mt-7 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#7775E8] via-[#A18AE8] to-[#F0A9CF] p-6 text-white shadow-lg shadow-purple-200/60">
+        <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#7775E8] via-[#A18AE8] to-[#F0A9CF] p-6 text-white shadow-lg shadow-purple-200/60">
           <div className="absolute -right-8 -top-10 size-36 rounded-full bg-white/10" />
           <div className="absolute -bottom-12 right-16 size-28 rounded-full bg-white/10" />
           <div className="absolute right-10 top-6 z-10 sm:right-6 md:right-22">
@@ -283,7 +284,7 @@ function DashboardPage() {
           </div>
         </section>
         {/* Wallet Allocation */}
-        <section className="mt-5 rounded-[28px] border border-white/70 bg-white/65 p-5 shadow-sm">
+        <section className="rounded-[28px] border border-white/70 bg-white/65 p-5 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-2xl bg-[#E9E3FF] text-[#7566C7]">
               <PieChart size={21} />
@@ -356,6 +357,7 @@ function DashboardPage() {
             })}
           </div>
         </section>
+        </div>
         {/* Wallet Cards จาก API จริง */}
         <section className="mt-8">
           <div className="mb-4 flex items-center justify-between">
@@ -399,18 +401,26 @@ function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div
+            className="grid grid-cols-2 gap-3 lg:[grid-template-columns:repeat(var(--wallet-cols),minmax(0,1fr))]"
+            style={
+              {
+                "--wallet-cols": Math.min(wallets.length, 4),
+              } as React.CSSProperties
+            }
+          >
             {wallets.map((wallet) => (
               <WalletCard key={wallet.id} wallet={wallet} />
             ))}
           </div>
         </section>
+        <div className="mt-6 grid gap-6">
         {/* Portfolio Section */}
-        <section className="mt-5">
+        <section>
           <PortfolioCard />
         </section>
         {/* Recent Transactions */}
-        <section className="mt-6">
+        <section>
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-[#39365F]">รายการล่าสุด</h2>
@@ -465,6 +475,7 @@ function DashboardPage() {
             )}
           </div>
         </section>
+        </div>
 
         {/* All Transactions Modal */}
         {isTransactionsOpen &&

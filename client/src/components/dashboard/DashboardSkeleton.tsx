@@ -1,6 +1,6 @@
 export function DashboardSkeleton() {
   return (
-    <main className="mx-auto min-h-screen w-full max-w-[480px] animate-pulse rounded-none bg-[#E3D9F6] px-5 py-5 sm:min-h-[800px] sm:rounded-[32px]">
+    <main className="mx-auto min-h-screen w-full max-w-6xl animate-pulse rounded-none bg-[#E3D9F6] px-5 py-5 sm:min-h-[800px] sm:rounded-[32px] sm:px-6 lg:px-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-2">
@@ -17,8 +17,9 @@ export function DashboardSkeleton() {
         <div className="h-4 w-40 rounded bg-white/50" />
       </section>
 
+      <div className="mt-7 grid gap-5">
       {/* Total Balance */}
-      <section className="mt-7 rounded-[28px] bg-gradient-to-br from-[#AAA6EE] to-[#F0C5DE] p-6">
+      <section className="rounded-[28px] bg-gradient-to-br from-[#AAA6EE] to-[#F0C5DE] p-6">
         <div className="h-4 w-32 rounded bg-white/50" />
         <div className="mt-5 h-9 w-44 rounded-lg bg-white/70" />
         <div className="mt-3 h-3 w-36 rounded bg-white/50" />
@@ -29,7 +30,7 @@ export function DashboardSkeleton() {
       </section>
 
       {/* Wallet Allocation */}
-      <section className="mt-5 rounded-[28px] bg-white/50 p-5">
+      <section className="rounded-[28px] bg-white/50 p-5">
         <div className="h-5 w-40 rounded bg-[#C9C2E8]" />
         <div className="mt-5 h-4 rounded-full bg-[#D8D2EE]" />
         <div className="mt-5 space-y-3">
@@ -38,26 +39,31 @@ export function DashboardSkeleton() {
           <div className="h-4 w-3/4 rounded bg-[#D8D2EE]" />
         </div>
       </section>
+      </div>
 
       {/* Wallet Cards */}
       <section className="mt-8">
         <div className="mb-4 h-6 w-40 rounded bg-white/60" />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <div className="h-28 rounded-2xl bg-white/60" />
           <div className="h-28 rounded-2xl bg-white/60" />
+          <div className="hidden h-28 rounded-2xl bg-white/60 lg:block" />
+          <div className="hidden h-28 rounded-2xl bg-white/60 lg:block" />
         </div>
       </section>
 
-      {/* Portfolio */}
-      <section className="mt-5 h-28 rounded-[28px] bg-white/50" />
+      <div className="mt-6 grid gap-6">
+        {/* Portfolio */}
+        <section className="h-28 rounded-[28px] bg-white/50" />
 
-      {/* Recent Transactions */}
-      <section className="mt-6 space-y-3">
-        <div className="mb-4 h-6 w-36 rounded bg-white/60" />
-        <div className="h-20 rounded-2xl bg-white/60" />
-        <div className="h-20 rounded-2xl bg-white/60" />
-        <div className="h-20 rounded-2xl bg-white/60" />
-      </section>
+        {/* Recent Transactions */}
+        <section className="space-y-3">
+          <div className="mb-4 h-6 w-36 rounded bg-white/60" />
+          <div className="h-20 rounded-2xl bg-white/60" />
+          <div className="h-20 rounded-2xl bg-white/60" />
+          <div className="h-20 rounded-2xl bg-white/60" />
+        </section>
+      </div>
     </main>
   );
 }

@@ -26,7 +26,7 @@ export class TransactionService {
     data: {
       transactionType: TransactionType;
       amount: number;
-      note?: string;
+      note?: string | null;
       transactionDate: Date;
     },
   ) {
@@ -61,7 +61,7 @@ export class TransactionService {
     data: {
       transactionType?: TransactionType;
       amount?: number;
-      note?: string;
+      note?: string | null;
       transactionDate?: Date;
     },
   ) {

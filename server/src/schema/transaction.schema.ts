@@ -24,7 +24,7 @@ export const CreateTransactionBodySchema = z.object({
       "จำนวนเงินต้องเป็นตัวเลขทศนิยมไม่เกิน 2 ตำแหน่ง",
     )
     .openapi({ example: "150.50" }),
-  note: z.string().optional().openapi({ example: "ซื้อกาแฟสด" }),
+  note: z.string().nullish().openapi({ example: "ซื้อกาแฟสด" }),
   transaction_date: z
     .string()
     .datetime()
@@ -35,7 +35,7 @@ export const CreateTransactionBodySchema = z.object({
 export const UpdateTransactionBodySchema = z.object({
   transaction_type: z.enum(["income", "expense"]).optional(),
   amount: z.string().optional(),
-  note: z.string().optional(),
+  note: z.string().nullish(),
 
   // แปลง "" ให้กลายเป็น undefined ก่อนโดนตรวจ .datetime()
   transaction_date: z
