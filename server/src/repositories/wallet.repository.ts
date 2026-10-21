@@ -99,4 +99,14 @@ export class WalletRepository {
       },
     });
   }
+
+  // 9. ค้นหา Wallet ด้วย publicId และ userId เพื่อตรวจสอบการมีอยู่และสิทธิ์ความเป็นเจ้าของ (ใช้กับ route ดู wallet เดี่ยว)
+  static async findByPublicIdAndUserId(publicId: string, userId: bigint) {
+    return await prisma.wallet.findFirst({
+      where: {
+        publicId,
+        userId,
+      },
+    });
+  }
 }

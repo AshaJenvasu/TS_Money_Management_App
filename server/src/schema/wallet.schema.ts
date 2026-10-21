@@ -14,6 +14,20 @@ export const WalletParamsSchema = z.object({
   }),
 });
 
+// Request Param สำหรับ GET /wallets/:publicId (ใช้เฉพาะ route ดู wallet เดี่ยว)
+export const WalletPublicIdParamSchema = z.object({
+  publicId: z
+    .string()
+    .uuid()
+    .openapi({
+      param: {
+        name: "publicId",
+        in: "path",
+      },
+      example: "550e8400-e29b-41d4-a716-446655440000",
+    }),
+});
+
 // 2. Request Body สำหรับ POST /wallets
 export const WalletCreateSchema = z.object({
   name: z.string().trim().min(1).max(100).openapi({
@@ -32,6 +46,10 @@ export const WalletUpdateSchema = z.object({
 export const WalletResponseSchema = z.object({
   id: z.string().openapi({
     example: "1",
+  }),
+
+  publicId: z.string().uuid().openapi({
+    example: "550e8400-e29b-41d4-a716-446655440000",
   }),
 
   name: z.string().openapi({

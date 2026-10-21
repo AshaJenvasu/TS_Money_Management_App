@@ -68,10 +68,13 @@ export class WalletService {
     }
   }
   // 3. Service: getWalletById
-  static async getWalletById(walletId: bigint, userId: bigint) {
+  static async getWalletById(publicId: string, userId: bigint) {
     try {
-      // ดึงข้อมูล Wallet โดยระบุทั้ง walletId และ userId เพื่อยืนยันสิทธิ์ความเป็นเจ้าของ
-      const wallet = await WalletRepository.findByIdAndUserId(walletId, userId);
+      // ดึงข้อมูล Wallet โดยระบุทั้ง publicId และ userId เพื่อยืนยันสิทธิ์ความเป็นเจ้าของ
+      const wallet = await WalletRepository.findByPublicIdAndUserId(
+        publicId,
+        userId,
+      );
       if (!wallet) {
         throw new Error("WALLET_NOT_FOUND");
       }
@@ -79,12 +82,12 @@ export class WalletService {
       // แปลง id เป็น String และ Date เป็น ISO String ตาม API Schema
       return {
         id: wallet.id.toString(),
+        publicId: wallet.publicId,
         name: wallet.name,
         createdAt: wallet.createdAt.toISOString(),
         updatedAt: wallet.updatedAt.toISOString(),
       };
     } catch (error: any) {
-      // โยน Error ต่อให้ Controller จัดการแยกแยะ HTTP Status
       if (error.message === "WALLET_NOT_FOUND") {
         throw error;
       }
