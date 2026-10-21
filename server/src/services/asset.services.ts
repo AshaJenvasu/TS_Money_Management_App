@@ -3,7 +3,7 @@ import { AssetType, Prisma } from "@prisma/client";
 import { HTTPException } from "hono/http-exception";
 
 export class AssetService {
-  // 1. Service: getAssets
+  // 1. Service: getAsse ts
   static async getAssets(userId: bigint) {
     return await AssetRepository.findByUserId(userId);
   }
