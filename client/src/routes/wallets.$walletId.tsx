@@ -1,24 +1,222 @@
+/* eslint-disable react-refresh/only-export-components */
+import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  ArrowLeft,
+  ChevronDown,
+  Plus,
+  Wallet as WalletIcon,
+} from "lucide-react";
+import { useWalletQuery } from "../hooks/useWalletQuery";
+import { useWalletBalanceQuery } from "../hooks/useWalletBalanceQuery";
+import { useTransactionsQuery } from "../hooks/useTransactionsQuery";
+import TransactionCard from "../components/transactions/TransactionCard";
+import TransactionCreateDialog from "../components/transactions/TransactionCreateDialog";
+import TransactionEditDialog from "../components/transactions/TransactionEditDialog";
+import TransactionDeleteDialog from "../components/transactions/TransactionDeleteDialog";
+import WalletDetailScene from "../components/wallet-detail/WalletDetailScene";
+import SakuraPetals from "../components/wallet-detail/SakuraPetals";
+import PeekingCat from "../components/wallet-detail/PeekingCat";
+import HeroDecor from "../components/wallet-detail/HeroDecor";
+import type { Transaction } from "../services/transaction.services";
+import { formatCurrency } from "../utils/formatCurrency";
 
-// หน้ารายละเอียดกระเป๋าเงิน (placeholder รอต่อ UI จริงใน Phase 2)
+const PAGE_SIZE = 5;
+
+interface TransactionGroup {
+  label: string;
+  items: Transaction[];
+}
+
+// จัดกลุ่มรายการธุรกรรมตามวันที่ สมมติว่ารายการที่ได้มาเรียงจากใหม่ไปเก่าอยู่แล้ว
+function groupTransactionsByDate(
+  transactions: Transaction[],
+): TransactionGroup[] {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+
+  const labelFor = (iso: string) => {
+    const date = new Date(iso);
+    if (isSameDay(date, today)) return "วันนี้";
+    if (isSameDay(date, yesterday)) return "เมื่อวาน";
+    return date.toLocaleDateString("th-TH", { day: "numeric", month: "long" });
+  };
+
+  const groups: TransactionGroup[] = [];
+  for (const transaction of transactions) {
+    const label = labelFor(transaction.transaction_date);
+    const lastGroup = groups[groups.length - 1];
+    if (lastGroup && lastGroup.label === label) {
+      lastGroup.items.push(transaction);
+    } else {
+      groups.push({ label, items: [transaction] });
+    }
+  }
+  return groups;
+}
+
 function WalletDetailPage() {
-  const { walletId } = Route.useParams();
+  // ชื่อ param ยังคือ walletId ตามชื่อไฟล์ route แต่ค่าจริงคือ publicId
+  const { walletId: publicId } = Route.useParams();
   const navigate = useNavigate();
 
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] =
+    useState<Transaction | null>(null);
+  const [deletingTransaction, setDeletingTransaction] =
+    useState<Transaction | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  const walletQuery = useWalletQuery(publicId);
+  const wallet = walletQuery.data;
+
+  const balanceQuery = useWalletBalanceQuery(wallet?.id ?? "");
+  const [transactionsQuery] = useTransactionsQuery(wallet ? [wallet.id] : []);
+
+  const transactions = transactionsQuery?.data ?? [];
+  const visibleTransactions = transactions.slice(0, visibleCount);
+  const hasMore = visibleCount < transactions.length;
+  const groupedTransactions = groupTransactionsByDate(visibleTransactions);
+
+  if (walletQuery.isLoading) {
+    return (
+      <section className="flex min-h-screen items-center justify-center bg-[#E9EAF8]">
+        <span className="loading loading-spinner loading-lg text-[#7566C7]" />
+      </section>
+    );
+  }
+
+  if (walletQuery.isError || !wallet) {
+    return (
+      <section className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#E9EAF8] p-6 text-center">
+        <p className="text-[#39365F]">
+          ไม่พบ wallet ที่ต้องการ หรือคุณไม่มีสิทธิ์เข้าถึง
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate({ to: "/wallets" })}
+          className="rounded-full bg-[#7566C7] px-5 py-2 text-sm font-semibold text-white"
+        >
+          กลับไปหน้ากระเป๋าเงิน
+        </button>
+      </section>
+    );
+  }
+
+  // แยกเครื่องหมายลบออกจากตัวเลขก่อนประกอบกับสัญลักษณ์บาท ป้องกัน "฿-1,000.00" ที่อ่านแปลก
+  const balanceValue = Number(balanceQuery.data?.balance ?? 0);
+  const isNegativeBalance = balanceValue < 0;
+  const balanceDisplay = balanceQuery.isLoading
+    ? "..."
+    : `${isNegativeBalance ? "-" : ""}฿${formatCurrency(Math.abs(balanceValue))}`;
+
   return (
-    <section className="min-h-screen bg-[#E9EAF8] p-6 text-[#1F2A5C]">
+    <section className="relative z-0 min-h-screen overflow-hidden bg-[#E9EAF8] p-6 text-[#1F2A5C]">
+      <WalletDetailScene />
+      <SakuraPetals />
       <button
         type="button"
         onClick={() => navigate({ to: "/wallets" })}
-        className="mb-4 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#7566C7] shadow-sm"
+        className="relative mb-4 flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#7566C7] shadow-sm"
       >
-        ← กลับไปหน้ากระเป๋าเงิน
+        <ArrowLeft size={16} />
+        กลับไปหน้ากระเป๋าเงิน
       </button>
+      <div className="relative mt-20">
+        <PeekingCat />
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#7566C7] to-[#9B8FE0] p-6 text-white shadow-[0_26px_50px_-22px_rgba(70,60,160,0.65),inset_0_1px_0_rgba(255,255,255,0.35)]">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -bottom-10 -right-10 size-40 rounded-full bg-white/10 blur-2xl"
+          />
+          <HeroDecor />
 
-      <h1 className="text-2xl font-bold text-[#39365F]">
-        Wallet Detail (placeholder)
-      </h1>
-      <p className="mt-2 text-[#716D98]">Wallet ID: {walletId}</p>
+          <div className="relative flex items-center gap-3">
+            <div className="flex size-12 items-center justify-center rounded-xl bg-white/20">
+              <WalletIcon size={24} />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">{wallet.name}</h1>
+              <p className="text-sm text-white/70">ยอดเงินคงเหลือ</p>
+            </div>
+          </div>
+
+          <p className="relative mt-6 text-3xl font-bold">{balanceDisplay}</p>
+
+          <button
+            type="button"
+            onClick={() => setIsCreateOpen(true)}
+            className="relative mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-3 text-sm font-bold text-[#7566C7] shadow-md transition hover:shadow-lg active:scale-[0.99]"
+          >
+            <Plus size={18} />
+            เพิ่มรายการ
+          </button>
+        </div>
+      </div>
+      <div className="relative mt-6 rounded-3xl bg-white/60 p-5">
+        <h2 className="mb-1 text-lg font-bold text-[#39365F]">รายการธุรกรรม</h2>
+
+        {transactionsQuery?.isLoading ? (
+          <p className="py-8 text-center text-[#8986A8]">กำลังโหลดรายการ...</p>
+        ) : transactions.length === 0 ? (
+          <p className="py-8 text-center text-[#8986A8]">
+            ยังไม่มีรายการธุรกรรมใน wallet นี้
+          </p>
+        ) : (
+          groupedTransactions.map((group) => (
+            <div key={group.label}>
+              <h3 className="mb-2 mt-4 text-xs font-semibold text-[#8986A8] first:mt-3">
+                {group.label}
+              </h3>
+              <div className="space-y-3">
+                {group.items.map((transaction) => (
+                  <TransactionCard
+                    key={transaction.id}
+                    transaction={transaction}
+                    walletName={wallet.name}
+                    onEdit={setEditingTransaction}
+                    onDelete={setDeletingTransaction}
+                  />
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+            className="mt-4 flex w-full items-center justify-center gap-1 rounded-full border border-[#7566C7] py-2 text-sm font-semibold text-[#7566C7]"
+          >
+            ดูเพิ่มเติม
+            <ChevronDown size={16} />
+          </button>
+        )}
+      </div>
+      {isCreateOpen && (
+        <TransactionCreateDialog
+          wallets={[wallet]}
+          onClose={() => setIsCreateOpen(false)}
+        />
+      )}
+      {editingTransaction && (
+        <TransactionEditDialog
+          transaction={editingTransaction}
+          wallets={[wallet]}
+          onClose={() => setEditingTransaction(null)}
+        />
+      )}
+      {deletingTransaction && (
+        <TransactionDeleteDialog
+          transaction={deletingTransaction}
+          walletName={wallet.name}
+          onClose={() => setDeletingTransaction(null)}
+        />
+      )}
     </section>
   );
 }

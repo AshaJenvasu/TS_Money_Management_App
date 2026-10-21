@@ -7,6 +7,7 @@ import {
   WalletParamsSchema,
   WalletUpdateSchema,
   WalletBalanceResponseSchema,
+  WalletPublicIdParamSchema,
 } from "../schema/wallet.schema";
 import { WalletService } from "../services/wallet.services";
 
@@ -77,15 +78,15 @@ export const createWalletRoute = createRoute({
   },
 });
 
-//  OpenAPI Route Specification สำหรับ GET /api/v1/wallets/{id}
+//  OpenAPI Route Specification สำหรับ GET /api/v1/wallets/{publicId}
 export const getWalletRoute = createRoute({
   method: "get",
-  path: "/wallets/{id}",
+  path: "/wallets/{publicId}",
   tags: ["Wallet"],
   security: [{ Bearer: [] }],
 
   request: {
-    params: WalletParamsSchema,
+    params: WalletPublicIdParamSchema,
   },
 
   responses: {
@@ -286,11 +287,11 @@ walletController.openapi(getWalletRoute, async (c) => {
 
     const userId = BigInt(payload.id);
 
-    // 2. ดึง walletId จาก Param ที่ผ่าน Zod Validation แล้ว
-    const { id: walletId } = c.req.valid("param");
+    // 2. ดึง publicId จาก Param ที่ผ่าน Zod Validation แล้ว
+    const { publicId } = c.req.valid("param");
 
     // 3. เรียก Service
-    const wallet = await WalletService.getWalletById(walletId, userId);
+    const wallet = await WalletService.getWalletById(publicId, userId);
     return c.json(wallet, 200);
   } catch (error: any) {
     console.error("Get Wallet By ID Error:", error);

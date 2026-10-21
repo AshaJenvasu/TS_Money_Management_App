@@ -16,11 +16,13 @@ export class WalletService {
       return wallets.map(
         (wallet: {
           id: bigint;
+          publicId: string;
           name: string;
           createdAt: Date;
           updatedAt: Date;
         }) => ({
           id: wallet.id.toString(),
+          publicId: wallet.publicId,
           name: wallet.name,
           createdAt: wallet.createdAt.toISOString(),
           updatedAt: wallet.updatedAt.toISOString(),
@@ -53,6 +55,7 @@ export class WalletService {
       // แปลง id เป็น String และ Date เป็น ISO String ตาม API Schema
       return {
         id: wallet.id.toString(),
+        publicId: wallet.publicId,
         name: wallet.name,
         createdAt: wallet.createdAt.toISOString(),
         updatedAt: wallet.updatedAt.toISOString(),
@@ -120,6 +123,7 @@ export class WalletService {
       // แปลง id เป็น String และ Date เป็น ISO String ตาม API Schema
       return {
         id: updatedWallet.id.toString(),
+        publicId: updatedWallet.publicId,
         name: updatedWallet.name,
         createdAt: updatedWallet.createdAt.toISOString(),
         updatedAt: updatedWallet.updatedAt.toISOString(),
@@ -148,6 +152,7 @@ export class WalletService {
       await WalletRepository.delete(walletId);
       return {
         id: wallet.id.toString(),
+        publicId: wallet.publicId,
         name: wallet.name,
         createdAt: wallet.createdAt.toISOString(),
         updatedAt: wallet.updatedAt.toISOString(),

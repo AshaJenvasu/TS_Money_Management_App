@@ -3,6 +3,7 @@ import { api } from "../api/axios";
 // รูปแบบข้อมูล Wallet ที่ Backend ส่งกลับมา
 export interface Wallet {
   id: string;
+  publicId: string;
   name: string;
   createdAt: string;
   updatedAt: string;
@@ -45,6 +46,12 @@ export const walletService = {
       name,
     });
 
+    return response.data;
+  },
+
+  // ดึง Wallet เดี่ยวตาม publicId (ใช้สำหรับหน้า Wallet Detail)
+  getWalletById: async (publicId: string): Promise<Wallet> => {
+    const response = await api.get<Wallet>(`/wallets/${publicId}`);
     return response.data;
   },
 };

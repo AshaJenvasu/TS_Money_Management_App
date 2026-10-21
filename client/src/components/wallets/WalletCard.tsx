@@ -118,7 +118,7 @@ export function WalletCard({ wallet }: WalletCardProps) {
   const handleCardClick = () => {
     navigate({
       to: "/wallets/$walletId",
-      params: { walletId: String(wallet.id) },
+      params: { walletId: wallet.publicId },
     });
   };
 
