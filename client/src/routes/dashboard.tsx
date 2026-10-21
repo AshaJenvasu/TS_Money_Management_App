@@ -187,10 +187,6 @@ function DashboardPage() {
     );
   }
 
-  if (wallets.length === 0) {
-    return <div className="p-8">ยังไม่มี Wallet 💰</div>;
-  }
-
   return (
     <div className="min-h-screen bg-[#E9EAF8] px-0 py-0 sm:py-3">
       {/* กรอบหลักของ Dashboard */}
@@ -236,127 +232,131 @@ function DashboardPage() {
           </div>
         </section>
         <div className="mt-7 grid gap-5">
-        {/* Total Balance Card */}
-        <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#7775E8] via-[#A18AE8] to-[#F0A9CF] p-6 text-white shadow-lg shadow-purple-200/60">
-          <div className="absolute -right-8 -top-10 size-36 rounded-full bg-white/10" />
-          <div className="absolute -bottom-12 right-16 size-28 rounded-full bg-white/10" />
-          <div className="absolute right-10 top-6 z-10 sm:right-6 md:right-22">
-            <DashboardMascot />
-          </div>
-          <div className="relative">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-white/85">
-                ยอดเงินรวมทั้งหมด
-              </p>
-
-              <button
-                type="button"
-                className="btn btn-ghost btn-circle btn-sm text-white hover:bg-white/20 "
-                onClick={() => setIsBalanceVisible((visible) => !visible)}
-                aria-label={isBalanceVisible ? "ซ่อนยอดเงิน" : "แสดงยอดเงิน"}
-              >
-                {isBalanceVisible ? (
-                  <Eye size={20} strokeWidth={1.8} />
-                ) : (
-                  <EyeOff size={20} strokeWidth={1.8} />
-                )}
-              </button>
+          {/* Total Balance Card */}
+          <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#7775E8] via-[#A18AE8] to-[#F0A9CF] p-6 text-white shadow-lg shadow-purple-200/60">
+            <div className="absolute -right-8 -top-10 size-36 rounded-full bg-white/10" />
+            <div className="absolute -bottom-12 right-16 size-28 rounded-full bg-white/10" />
+            <div className="absolute right-10 top-6 z-10 sm:right-6 md:right-22">
+              <DashboardMascot />
             </div>
+            <div className="relative">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-white/85">
+                  ยอดเงินรวมทั้งหมด
+                </p>
 
-            <div className="mt-3 text-3xl font-extrabold tracking-tight">
-              {isBalancePending
-                ? "กำลังโหลด..."
-                : isBalanceError
-                  ? "โหลดข้อมูลไม่สำเร็จ"
-                  : isBalanceVisible
-                    ? `฿${formatCurrency(totalBalance)}`
-                    : "฿ •••••••"}
-            </div>
-
-            <p className="mt-2 text-xs text-white/80">
-              รวมยอดเงินจากทุก Wallet
-            </p>
-
-            <div className="mt-6 flex items-center justify-between border-t border-white/25 pt-4">
-              <span className="text-sm text-white/85">จำนวน Wallet</span>
-              <span className="font-bold">{wallets.length} ใบ</span>
-            </div>
-          </div>
-        </section>
-        {/* Wallet Allocation */}
-        <section className="rounded-[28px] border border-white/70 bg-white/65 p-5 shadow-sm">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-[#E9E3FF] text-[#7566C7]">
-              <PieChart size={21} />
-            </div>
-
-            <div>
-              <h2 className="font-bold text-[#39365F]">สัดส่วนเงินของฉัน</h2>
-              <p className="text-xs text-[#8986A8]">
-                เงินของคุณกระจายอยู่ที่ไหนบ้าง
-              </p>
-            </div>
-          </div>
-
-          {/* Single stacked progress bar */}
-          <div className="flex h-4 w-full overflow-hidden rounded-full bg-[#E9E6F4]">
-            {walletAllocations.map((wallet, index) => {
-              const colors = [
-                "bg-[#7566C7]",
-                "bg-[#F08CB8]",
-                "bg-[#70B8D8]",
-                "bg-[#E9B96E]",
-                "bg-[#7DBFA3]",
-              ];
-
-              return (
-                wallet.percentage > 0 && (
-                  <div
-                    key={wallet.id}
-                    className={`${colors[index % colors.length]} transition-all duration-500`}
-                    style={{ width: `${wallet.percentage}%` }}
-                    title={`${wallet.name}: ${wallet.percentage.toFixed(1)}%`}
-                  />
-                )
-              );
-            })}
-          </div>
-
-          {/* Wallet legend */}
-          <div className="mt-4 flex flex-col gap-3">
-            {walletAllocations.map((wallet, index) => {
-              const colors = [
-                "bg-[#7566C7]",
-                "bg-[#F08CB8]",
-                "bg-[#70B8D8]",
-                "bg-[#E9B96E]",
-                "bg-[#7DBFA3]",
-              ];
-
-              return (
-                <div
-                  key={wallet.id}
-                  className="flex items-center justify-between gap-3"
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-circle btn-sm text-white hover:bg-white/20 "
+                  onClick={() => setIsBalanceVisible((visible) => !visible)}
+                  aria-label={isBalanceVisible ? "ซ่อนยอดเงิน" : "แสดงยอดเงิน"}
                 >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span
-                      className={`size-3 shrink-0 rounded-full ${
-                        colors[index % colors.length]
-                      }`}
-                    />
-                    <span className="truncate text-sm font-medium text-[#39365F]">
-                      {wallet.name}
-                    </span>
-                  </div>
+                  {isBalanceVisible ? (
+                    <Eye size={20} strokeWidth={1.8} />
+                  ) : (
+                    <EyeOff size={20} strokeWidth={1.8} />
+                  )}
+                </button>
+              </div>
 
-                  <span className="shrink-0 text-sm font-bold text-[#7566C7]">
-                    {wallet.percentage.toFixed(1)}%
-                  </span>
+              <div className="mt-3 text-3xl font-extrabold tracking-tight">
+                {isBalancePending
+                  ? "กำลังโหลด..."
+                  : isBalanceError
+                    ? "โหลดข้อมูลไม่สำเร็จ"
+                    : isBalanceVisible
+                      ? `฿${formatCurrency(totalBalance)}`
+                      : "฿ •••••••"}
+              </div>
+
+              <p className="mt-2 text-xs text-white/80">
+                รวมยอดเงินจากทุก Wallet
+              </p>
+
+              <div className="mt-6 flex items-center justify-between border-t border-white/25 pt-4">
+                <span className="text-sm text-white/85">จำนวน Wallet</span>
+                <span className="font-bold">{wallets.length} ใบ</span>
+              </div>
+            </div>
+          </section>
+          {/* Wallet Allocation */}
+          {wallets.length > 0 && (
+            <section className="rounded-[28px] border border-white/70 bg-white/65 p-5 shadow-sm">
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex size-10 items-center justify-center rounded-2xl bg-[#E9E3FF] text-[#7566C7]">
+                  <PieChart size={21} />
                 </div>
-              );
-            })}
-          </div>
-        </section>
+
+                <div>
+                  <h2 className="font-bold text-[#39365F]">
+                    สัดส่วนเงินของฉัน
+                  </h2>
+                  <p className="text-xs text-[#8986A8]">
+                    เงินของคุณกระจายอยู่ที่ไหนบ้าง
+                  </p>
+                </div>
+              </div>
+
+              {/* Single stacked progress bar */}
+              <div className="flex h-4 w-full overflow-hidden rounded-full bg-[#E9E6F4]">
+                {walletAllocations.map((wallet, index) => {
+                  const colors = [
+                    "bg-[#7566C7]",
+                    "bg-[#F08CB8]",
+                    "bg-[#70B8D8]",
+                    "bg-[#E9B96E]",
+                    "bg-[#7DBFA3]",
+                  ];
+
+                  return (
+                    wallet.percentage > 0 && (
+                      <div
+                        key={wallet.id}
+                        className={`${colors[index % colors.length]} transition-all duration-500`}
+                        style={{ width: `${wallet.percentage}%` }}
+                        title={`${wallet.name}: ${wallet.percentage.toFixed(1)}%`}
+                      />
+                    )
+                  );
+                })}
+              </div>
+
+              {/* Wallet legend */}
+              <div className="mt-4 flex flex-col gap-3">
+                {walletAllocations.map((wallet, index) => {
+                  const colors = [
+                    "bg-[#7566C7]",
+                    "bg-[#F08CB8]",
+                    "bg-[#70B8D8]",
+                    "bg-[#E9B96E]",
+                    "bg-[#7DBFA3]",
+                  ];
+
+                  return (
+                    <div
+                      key={wallet.id}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className={`size-3 shrink-0 rounded-full ${
+                            colors[index % colors.length]
+                          }`}
+                        />
+                        <span className="truncate text-sm font-medium text-[#39365F]">
+                          {wallet.name}
+                        </span>
+                      </div>
+
+                      <span className="shrink-0 text-sm font-bold text-[#7566C7]">
+                        {wallet.percentage.toFixed(1)}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
         </div>
         {/* Wallet Cards จาก API จริง */}
         <section className="mt-8">
@@ -401,80 +401,111 @@ function DashboardPage() {
             </div>
           </div>
 
-          <div
-            className="grid grid-cols-2 gap-3 lg:[grid-template-columns:repeat(var(--wallet-cols),minmax(0,1fr))]"
-            style={
-              {
-                "--wallet-cols": Math.min(wallets.length, 4),
-              } as React.CSSProperties
-            }
-          >
-            {wallets.map((wallet) => (
-              <WalletCard key={wallet.id} wallet={wallet} />
-            ))}
-          </div>
+          {wallets.length === 0 ? (
+            <div className="flex flex-col items-center gap-4 rounded-[28px] border border-dashed border-[#C9BFEF] bg-white/60 px-6 py-10 text-center">
+              <div className="flex size-16 items-center justify-center rounded-full bg-[#EAE5FF] text-[#7566C7]">
+                <WalletCards size={30} strokeWidth={1.8} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[#39365F]">
+                  ยังไม่มีกระเป๋าเงิน
+                </h3>
+                <p className="mt-1 text-sm text-[#8986A8]">
+                  สร้างกระเป๋าแรกของคุณ เพื่อเริ่มบันทึกรายรับรายจ่ายได้เลย
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn rounded-full border-0 bg-[#7566C7] px-6 text-white shadow-sm hover:bg-[#6356B8]"
+                onClick={() => {
+                  setWalletName("");
+                  setValidationError("");
+                  setErrorMessage("");
+                  setIsCreateOpen(true);
+                }}
+              >
+                <Plus size={16} />
+                สร้างกระเป๋าแรกของคุณ
+              </button>
+            </div>
+          ) : (
+            <div
+              className="grid grid-cols-2 gap-3 lg:[grid-template-columns:repeat(var(--wallet-cols),minmax(0,1fr))]"
+              style={
+                {
+                  "--wallet-cols": Math.min(wallets.length, 4),
+                } as React.CSSProperties
+              }
+            >
+              {wallets.map((wallet) => (
+                <WalletCard key={wallet.id} wallet={wallet} />
+              ))}
+            </div>
+          )}
         </section>
         <div className="mt-6 grid gap-6">
-        {/* Portfolio Section */}
-        <section>
-          <PortfolioCard />
-        </section>
-        {/* Recent Transactions */}
-        <section>
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-[#39365F]">รายการล่าสุด</h2>
-              <p className="text-xs text-[#8986A8]">
-                ความเคลื่อนไหวทางการเงินของคุณ
-              </p>
+          {/* Portfolio Section */}
+          <section>
+            <PortfolioCard />
+          </section>
+          {/* Recent Transactions */}
+          <section>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-[#39365F]">
+                  รายการล่าสุด
+                </h2>
+                <p className="text-xs text-[#8986A8]">
+                  ความเคลื่อนไหวทางการเงินของคุณ
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="text-sm font-semibold text-[#7566C7]"
+                onClick={() => {
+                  setTransactionPage(1);
+                  setIsTransactionsOpen(true);
+                }}
+              >
+                ดูทั้งหมด →
+              </button>
             </div>
 
-            <button
-              type="button"
-              className="text-sm font-semibold text-[#7566C7]"
-              onClick={() => {
-                setTransactionPage(1);
-                setIsTransactionsOpen(true);
-              }}
-            >
-              ดูทั้งหมด →
-            </button>
-          </div>
+            <div className="flex flex-col gap-3">
+              {isRecentTransactionsPending ? (
+                <div className="rounded-2xl bg-white/65 p-5 text-center text-sm text-[#8986A8]">
+                  กำลังโหลดรายการธุรกรรม...
+                </div>
+              ) : isRecentTransactionsError ? (
+                <div className="rounded-2xl bg-white/65 p-5 text-center text-sm text-error">
+                  โหลดรายการธุรกรรมไม่สำเร็จ
+                </div>
+              ) : recentTransactions.length === 0 ? (
+                <div className="rounded-2xl bg-white/65 p-5 text-center text-sm text-[#8986A8]">
+                  ยังไม่มีรายการธุรกรรม
+                </div>
+              ) : (
+                recentTransactions.map((transaction) => {
+                  // ค้นหา Wallet ของ Transaction นี้
+                  const wallet = wallets.find(
+                    (item) => item.id === transaction.wallet_id,
+                  );
 
-          <div className="flex flex-col gap-3">
-            {isRecentTransactionsPending ? (
-              <div className="rounded-2xl bg-white/65 p-5 text-center text-sm text-[#8986A8]">
-                กำลังโหลดรายการธุรกรรม...
-              </div>
-            ) : isRecentTransactionsError ? (
-              <div className="rounded-2xl bg-white/65 p-5 text-center text-sm text-error">
-                โหลดรายการธุรกรรมไม่สำเร็จ
-              </div>
-            ) : recentTransactions.length === 0 ? (
-              <div className="rounded-2xl bg-white/65 p-5 text-center text-sm text-[#8986A8]">
-                ยังไม่มีรายการธุรกรรม
-              </div>
-            ) : (
-              recentTransactions.map((transaction) => {
-                // ค้นหา Wallet ของ Transaction นี้
-                const wallet = wallets.find(
-                  (item) => item.id === transaction.wallet_id,
-                );
-
-                return (
-                  <TransactionCard
-                    key={transaction.id}
-                    transaction={transaction}
-                    walletName={wallet?.name ?? "Wallet"}
-                    showTodayLabel
-                    onEdit={(item) => setEditingTransaction(item)}
-                    onDelete={(item) => setDeletingTransaction(item)}
-                  />
-                );
-              })
-            )}
-          </div>
-        </section>
+                  return (
+                    <TransactionCard
+                      key={transaction.id}
+                      transaction={transaction}
+                      walletName={wallet?.name ?? "Wallet"}
+                      showTodayLabel
+                      onEdit={(item) => setEditingTransaction(item)}
+                      onDelete={(item) => setDeletingTransaction(item)}
+                    />
+                  );
+                })
+              )}
+            </div>
+          </section>
         </div>
 
         {/* All Transactions Modal */}
