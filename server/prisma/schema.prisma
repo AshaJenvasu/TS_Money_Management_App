@@ -47,6 +47,7 @@ model User {
 
 model Wallet {
   id        BigInt   @id @default(autoincrement())
+  publicId  String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("public_id")
   userId    BigInt   @map("user_id")
   name      String   @db.VarChar(100)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp

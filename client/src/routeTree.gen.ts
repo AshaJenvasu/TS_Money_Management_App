@@ -13,7 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
-import { Route as WalletsRouteImport } from './routes/wallets'
+import { Route as WalletsIndexRouteImport } from './routes/wallets.index'
+import { Route as WalletsWalletIdRouteImport } from './routes/wallets.$walletId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -35,9 +36,14 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WalletsRoute = WalletsRouteImport.update({
-  id: '/wallets',
-  path: '/wallets',
+const WalletsIndexRoute = WalletsIndexRouteImport.update({
+  id: '/wallets/',
+  path: '/wallets/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WalletsWalletIdRoute = WalletsWalletIdRouteImport.update({
+  id: '/wallets/$walletId',
+  path: '/wallets/$walletId',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -46,14 +52,16 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/wallets': typeof WalletsRoute
+  '/wallets/$walletId': typeof WalletsWalletIdRoute
+  '/wallets/': typeof WalletsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/wallets': typeof WalletsRoute
+  '/wallets/$walletId': typeof WalletsWalletIdRoute
+  '/wallets': typeof WalletsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,14 +69,34 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/wallets': typeof WalletsRoute
+  '/wallets/$walletId': typeof WalletsWalletIdRoute
+  '/wallets/': typeof WalletsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/login' | '/register' | '/wallets'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/register'
+    | '/wallets/$walletId'
+    | '/wallets/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/login' | '/register' | '/wallets'
-  id: '__root__' | '/' | '/dashboard' | '/login' | '/register' | '/wallets'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/register'
+    | '/wallets/$walletId'
+    | '/wallets'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/register'
+    | '/wallets/$walletId'
+    | '/wallets/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,7 +104,8 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
-  WalletsRoute: typeof WalletsRoute
+  WalletsWalletIdRoute: typeof WalletsWalletIdRoute
+  WalletsIndexRoute: typeof WalletsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -109,11 +138,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/wallets': {
-      id: '/wallets'
+    '/wallets/': {
+      id: '/wallets/'
       path: '/wallets'
-      fullPath: '/wallets'
-      preLoaderRoute: typeof WalletsRouteImport
+      fullPath: '/wallets/'
+      preLoaderRoute: typeof WalletsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wallets/$walletId': {
+      id: '/wallets/$walletId'
+      path: '/wallets/$walletId'
+      fullPath: '/wallets/$walletId'
+      preLoaderRoute: typeof WalletsWalletIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -124,7 +160,8 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
-  WalletsRoute: WalletsRoute,
+  WalletsWalletIdRoute: WalletsWalletIdRoute,
+  WalletsIndexRoute: WalletsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

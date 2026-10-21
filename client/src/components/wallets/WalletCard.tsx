@@ -13,6 +13,7 @@ import { useWalletBalanceQuery } from "../../hooks/useWalletBalanceQuery";
 import type { Wallet } from "../../services/wallet.services";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { walletService } from "../../services/wallet.services";
+import { useNavigate } from "@tanstack/react-router";
 
 interface WalletCardProps {
   wallet: Wallet;
@@ -20,6 +21,8 @@ interface WalletCardProps {
 
 // แสดงข้อมูลและยอดเงินของ Wallet แต่ละใบ
 export function WalletCard({ wallet }: WalletCardProps) {
+  const navigate = useNavigate();
+
   // ดึงยอดเงินของ Wallet
   const { data, isPending, isError } = useWalletBalanceQuery(wallet.id);
 
@@ -111,8 +114,28 @@ export function WalletCard({ wallet }: WalletCardProps) {
     updateMutation.mutate();
   };
 
+  // พาไปหน้า detail ของกระเป๋าใบนี้
+  const handleCardClick = () => {
+    navigate({
+      to: "/wallets/$walletId",
+      params: { walletId: String(wallet.id) },
+    });
+  };
+
   return (
-    <div className="card border border-white/80 bg-white/70 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleCardClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+      aria-label={`ดูรายละเอียดกระเป๋า ${wallet.name}`}
+      className="card cursor-pointer border border-white/80 bg-white/70 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7566C7]"
+    >
       <div className="card-body gap-3 p-4">
         {/* แสดงรูปแบบของ Wallet */}
         <div className="flex items-start justify-between gap-2">
@@ -125,7 +148,10 @@ export function WalletCard({ wallet }: WalletCardProps) {
               Wallet
             </span>
             {/*  แสดงชื่อ Wallet */}
-            <div className="dropdown dropdown-end relative">
+            <div
+              className="dropdown dropdown-end relative"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -203,7 +229,10 @@ export function WalletCard({ wallet }: WalletCardProps) {
       {/* Edit Popup */}
       {isEditOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="w-full max-w-lg rounded-2xl bg-white p-8 shadow-2xl ">
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex size-12 items-center justify-center rounded-xl bg-[#EAE5FF] text-[#7566C7] ">

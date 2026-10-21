@@ -457,6 +457,6 @@ function WalletsPage() {
   );
 }
 
-export const Route = createFileRoute("/wallets")({
+export const Route = createFileRoute("/wallets/")({
   component: WalletsPage,
 });
