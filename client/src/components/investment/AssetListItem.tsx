@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Coins, TrendingUp, Pencil, Trash2 } from "lucide-react";
 import type { AssetView } from "../../types/investment";
 import { formatCurrency } from "../../utils/formatCurrency";
 
@@ -6,6 +6,15 @@ const ASSET_TYPE_LABEL: Record<string, string> = {
   crypto: "คริปโต",
   stock: "หุ้น",
 };
+
+// icon badge ตามประเภทสินทรัพย์ แทนการโชว์ symbol ซ้ำกับ title
+function AssetTypeBadge({ assetType }: { assetType: string }) {
+  return (
+    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#EEF1FC] text-[#7566C7]">
+      {assetType === "stock" ? <TrendingUp size={18} /> : <Coins size={18} />}
+    </span>
+  );
+}
 
 function formatQuantity(value: number) {
   return value.toLocaleString("en-US", { maximumFractionDigits: 8 });
@@ -23,6 +32,8 @@ interface AssetListItemProps {
   isExpanded: boolean;
   onToggleExpand: () => void;
   onShowHistory: () => void;
+  onEditClick: () => void;
+  onDeleteClick: () => void;
 }
 
 // การ์ดสินทรัพย์หนึ่งตัวใน list "สินทรัพย์ของฉัน" พร้อมส่วนขยายดูรายละเอียดเพิ่มเติม
@@ -31,13 +42,13 @@ export function AssetListItem({
   isExpanded,
   onToggleExpand,
   onShowHistory,
+  onEditClick,
+  onDeleteClick,
 }: AssetListItemProps) {
   return (
     <li className="rounded-2xl bg-white/90 p-4 shadow-sm">
       <div className="flex items-center gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#EEF1FC] text-sm font-bold text-[#7566C7]">
-          {view.asset.symbol.slice(0, 3)}
-        </span>
+        <AssetTypeBadge assetType={view.asset.asset_type} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="font-bold">{view.asset.symbol}</span>
@@ -46,6 +57,24 @@ export function AssetListItem({
             </span>
           </div>
           <p className="truncate text-xs text-[#5C6899]">{view.asset.name}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={onEditClick}
+            aria-label={`แก้ไข ${view.asset.symbol}`}
+            className="flex size-9 items-center justify-center rounded-full text-[#5C6899] transition hover:bg-[#EEF1FC] hover:text-[#7566C7]"
+          >
+            <Pencil size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={onDeleteClick}
+            aria-label={`ลบ ${view.asset.symbol}`}
+            className="flex size-9 items-center justify-center rounded-full text-[#5C6899] transition hover:bg-[#FFE3EC] hover:text-[#CF3D6B]"
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
       </div>
 

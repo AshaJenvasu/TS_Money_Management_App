@@ -12,7 +12,7 @@ export default function HeroDecor() {
       <svg
         aria-hidden="true"
         viewBox="0 0 32 32"
-        className="pointer-events-none absolute right-5 top-4 size-11 rotate-12 drop-shadow-[0_4px_6px_rgba(31,42,92,0.35)]"
+        className="pointer-events-none absolute right-2 top-1 size-11 rotate-12 drop-shadow-[0_4px_6px_rgba(31,42,92,0.35)]"
       >
         <circle cx="16" cy="16" r="14" fill="#FFD66B" />
         <circle

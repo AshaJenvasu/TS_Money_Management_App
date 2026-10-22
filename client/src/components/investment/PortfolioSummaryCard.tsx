@@ -1,4 +1,5 @@
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import HeroDecor from "../wallet-detail/HeroDecor";
 import type { AssetView } from "../../types/investment";
 import { formatCurrency } from "../../utils/formatCurrency";
 
@@ -23,7 +24,8 @@ export function PortfolioSummaryCard({
   heldAssetViews,
 }: PortfolioSummaryCardProps) {
   return (
-    <section className="mb-6 flex flex-wrap items-center gap-4 rounded-[26px] bg-white/90 p-5 shadow-sm">
+    <section className="relative mb-6 flex flex-wrap items-center gap-4 overflow-hidden rounded-[26px] bg-white/90 p-5 shadow-sm">
+      <HeroDecor />
       <div className="min-w-[150px] flex-1">
         <p className="text-sm font-medium text-[#5C6899]">ต้นทุนรวมของพอร์ต</p>
         <p className="mt-1 text-3xl font-extrabold">

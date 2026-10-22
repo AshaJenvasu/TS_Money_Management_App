@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import type { AssetView } from "../../types/investment";
 import { AssetListItem } from "./AssetListItem";
 
@@ -10,6 +10,9 @@ interface AssetListSectionProps {
   expandedAssetIds: Set<string>;
   onToggleExpand: (assetId: string) => void;
   onShowHistoryOfAsset: (assetId: string) => void;
+  onCreateAssetClick: () => void;
+  onEditAsset: (assetId: string) => void;
+  onDeleteAsset: (assetId: string) => void;
 }
 
 // ส่วน "สินทรัพย์ของฉัน" ค้นหา + list การ์ด asset ทั้งหมด
@@ -21,11 +24,22 @@ export function AssetListSection({
   expandedAssetIds,
   onToggleExpand,
   onShowHistoryOfAsset,
+  onCreateAssetClick,
+  onEditAsset,
+  onDeleteAsset,
 }: AssetListSectionProps) {
   return (
     <section className="mb-6">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-bold">สินทรัพย์ของฉัน</h2>
+        <button
+          type="button"
+          onClick={onCreateAssetClick}
+          className="btn btn-sm rounded-full border-0 bg-[#7566C7] px-4 text-white shadow-sm hover:bg-[#6356B8]"
+        >
+          <Plus size={16} />
+          เพิ่มสินทรัพย์
+        </button>
       </div>
 
       <div className="relative mb-3">
@@ -54,6 +68,8 @@ export function AssetListSection({
               isExpanded={expandedAssetIds.has(view.asset.id)}
               onToggleExpand={() => onToggleExpand(view.asset.id)}
               onShowHistory={() => onShowHistoryOfAsset(view.asset.id)}
+              onEditClick={() => onEditAsset(view.asset.id)}
+              onDeleteClick={() => onDeleteAsset(view.asset.id)}
             />
           ))}
         </ul>

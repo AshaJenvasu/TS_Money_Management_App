@@ -1,14 +1,29 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, ChartNoAxesCombined, CircleAlert } from "lucide-react";
+import {
+  ArrowLeft,
+  ChartNoAxesCombined,
+  CircleAlert,
+  Plus,
+} from "lucide-react";
 import { useAssetsQuery } from "../hooks/useAssetsQuery";
 import { usePortfolioQuery } from "../hooks/usePortfolioQuery";
 import { usePortfolioTransactionsQuery } from "../hooks/usePortfolioTransactionsQuery";
 import { PortfolioSummaryCard } from "../components/investment/PortfolioSummaryCard";
 import { AssetListSection } from "../components/investment/AssetListSection";
 import { TransactionHistorySection } from "../components/investment/TransactionHistorySection";
+import { AssetCreateDialog } from "../components/investment/AssetCreateDialog";
+import { AssetEditDialog } from "../components/investment/AssetEditDialog";
+import { AssetDeleteDialog } from "../components/investment/AssetDeleteDialog";
+import { TransactionCreateDialog } from "../components/investment/TransactionCreateDialog";
+import { TransactionEditDialog } from "../components/investment/TransactionEditDialog";
+import { TransactionDeleteDialog } from "../components/investment/TransactionDeleteDialog";
+import WalletDetailScene from "../components/wallet-detail/WalletDetailScene";
+import SakuraPetals from "../components/wallet-detail/SakuraPetals";
+import PeekingCat from "../components/wallet-detail/PeekingCat";
 import type { AssetView } from "../types/investment";
+import type { PortfolioTransactionListItem } from "../services/portfolio.services";
 
 function InvestmentPage() {
   const navigate = useNavigate();
@@ -19,6 +34,18 @@ function InvestmentPage() {
   );
   const [filterAssetId, setFilterAssetId] = useState<string | null>(null);
   const [historyShown, setHistoryShown] = useState(5);
+  const [isCreateAssetOpen, setIsCreateAssetOpen] = useState(false);
+  const [editingAssetView, setEditingAssetView] = useState<AssetView | null>(
+    null,
+  );
+  const [deletingAssetView, setDeletingAssetView] = useState<AssetView | null>(
+    null,
+  );
+  const [isCreateTransactionOpen, setIsCreateTransactionOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] =
+    useState<PortfolioTransactionListItem | null>(null);
+  const [deletingTransaction, setDeletingTransaction] =
+    useState<PortfolioTransactionListItem | null>(null);
 
   const assetsQuery = useAssetsQuery();
   const portfolioQuery = usePortfolioQuery();
@@ -146,9 +173,11 @@ function InvestmentPage() {
     assets.find((a) => a.id === filterAssetId)?.symbol ?? null;
 
   return (
-    <div className="min-h-screen bg-[#E9EAF8] px-5 py-6 text-[#1F2A5C] sm:px-8">
-      <div className="mx-auto w-full max-w-3xl">
-        <header className="mb-6 flex items-center gap-3">
+    <div className="relative z-0 min-h-screen overflow-hidden bg-[#E9EAF8] px-5 py-6 text-[#1F2A5C] sm:px-8">
+      <WalletDetailScene />
+      <SakuraPetals />
+      <div className="relative mx-auto w-full max-w-3xl">
+        <header className="relative mb-6 flex items-center gap-3">
           <button
             type="button"
             onClick={() => navigate({ to: "/dashboard" })}
@@ -165,10 +194,13 @@ function InvestmentPage() {
           </h1>
         </header>
 
-        <PortfolioSummaryCard
-          totalCost={totalCost}
-          heldAssetViews={heldAssetViews}
-        />
+        <div className="relative mt-20">
+          <PeekingCat />
+          <PortfolioSummaryCard
+            totalCost={totalCost}
+            heldAssetViews={heldAssetViews}
+          />
+        </div>
 
         <AssetListSection
           assetViews={filteredAssetViews}
@@ -178,7 +210,26 @@ function InvestmentPage() {
           expandedAssetIds={expandedAssetIds}
           onToggleExpand={toggleExpanded}
           onShowHistoryOfAsset={showHistoryOfAsset}
+          onCreateAssetClick={() => setIsCreateAssetOpen(true)}
+          onEditAsset={(assetId) =>
+            setEditingAssetView(
+              assetViews.find((view) => view.asset.id === assetId) ?? null,
+            )
+          }
+          onDeleteAsset={(assetId) =>
+            setDeletingAssetView(
+              assetViews.find((view) => view.asset.id === assetId) ?? null,
+            )
+          }
         />
+
+        <button
+          type="button"
+          onClick={() => setIsCreateTransactionOpen(true)}
+          className="mb-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#F2709F] to-[#D8407B] py-3.5 text-base font-bold text-white shadow-lg shadow-pink-200/60"
+        >
+          <Plus size={20} /> เพิ่มรายการซื้อขาย
+        </button>
 
         <TransactionHistorySection
           transactions={sortedTransactions}
@@ -189,8 +240,56 @@ function InvestmentPage() {
             setFilterAssetId(null);
             setHistoryShown(5);
           }}
+          onEditTransaction={setEditingTransaction}
+          onDeleteTransaction={setDeletingTransaction}
         />
       </div>
+      {isCreateAssetOpen && (
+        <AssetCreateDialog onClose={() => setIsCreateAssetOpen(false)} />
+      )}
+
+      {editingAssetView && (
+        <AssetEditDialog
+          assetView={editingAssetView}
+          onClose={() => setEditingAssetView(null)}
+        />
+      )}
+
+      {deletingAssetView && (
+        <AssetDeleteDialog
+          assetView={deletingAssetView}
+          onClose={() => setDeletingAssetView(null)}
+          onDeleted={(assetId) => {
+            setFilterAssetId((prev) => (prev === assetId ? null : prev));
+            setExpandedAssetIds((prev) => {
+              const next = new Set(prev);
+              next.delete(assetId);
+              return next;
+            });
+          }}
+        />
+      )}
+
+      {isCreateTransactionOpen && (
+        <TransactionCreateDialog
+          assetViews={assetViews}
+          onClose={() => setIsCreateTransactionOpen(false)}
+        />
+      )}
+
+      {editingTransaction && (
+        <TransactionEditDialog
+          transaction={editingTransaction}
+          onClose={() => setEditingTransaction(null)}
+        />
+      )}
+
+      {deletingTransaction && (
+        <TransactionDeleteDialog
+          transaction={deletingTransaction}
+          onClose={() => setDeletingTransaction(null)}
+        />
+      )}
     </div>
   );
 }

@@ -7,7 +7,7 @@ export default function WalletDetailScene() {
       aria-hidden="true"
       viewBox="0 0 480 200"
       preserveAspectRatio="xMidYMin slice"
-      className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-52 w-full"
+      className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-52 w-full sm:h-64 lg:h-80 xl:h-"
     >
       <defs>
         <linearGradient id="walletDetailSky" x1="0" y1="0" x2="0" y2="1">
@@ -28,17 +28,19 @@ export default function WalletDetailScene() {
         fill="#AEB4E8"
         opacity="0.55"
       />
-      {/* ภูเขาหน้า ตั้งยอดไว้แถว y 30-66 ให้พ้นขอบบนของ hero card */}
-      <path
-        d="M120 130L190 55Q215 30 240 55L300 130Z"
-        fill="url(#walletDetailMountain)"
-        opacity="0.75"
-      />
-      <path
-        d="M190 55Q215 30 240 55L250 66L242 63L236 70L227 64L218 72L209 65L202 71L195 64L186 67Z"
-        fill="#fff"
-        opacity="0.9"
-      />
+      {/* ภูเขาหน้า ขยับขึ้น 30 หน่วยให้ยอดพ้นขอบบนของการ์ดต้นทุนพอร์ต */}
+      <g transform="translate(0, -35)">
+        <path
+          d="M120 130L190 55Q215 30 240 55L300 130Z"
+          fill="url(#walletDetailMountain)"
+          opacity="0.75"
+        />{" "}
+        <path
+          d="M190 55Q215 30 240 55L250 66L242 63L236 70L227 64L218 72L209 65L202 71L195 64L186 67Z"
+          fill="#fff"
+          opacity="0.9"
+        />
+      </g>
 
       {/* เมฆ */}
       <path
@@ -50,6 +52,13 @@ export default function WalletDetailScene() {
         d="M420 80c-8 0-13-5-13-11 0-6 5-9 11-9 .5-7 7-12 14-12s13 5 14 11c6 0 10 5 10 10s-5 11-11 11z"
         fill="#fff"
         opacity="0.7"
+      />
+
+      {/* เมฆฝั่งซ้าย ให้สมดุลกับฝั่งขวาที่มีเมฆ+แมว+เหรียญ */}
+      <path
+        d="M80 72c-10 0-16-6-16-13 0-7 6-11 13-11 .7-9 9-15 18-15s16 6 17 13c8 0 13 6 13 13s-6 13-14 13z"
+        fill="#fff"
+        opacity="0.8"
       />
 
       {/* กลุ่มดอกซากุระนิ่งๆ ไว้มุมบนซ้าย ห่างจากตำแหน่งแมวที่อยู่ขวา กันทับกัน */}

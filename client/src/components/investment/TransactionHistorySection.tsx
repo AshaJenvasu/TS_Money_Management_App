@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Pencil, Trash2 } from "lucide-react";
 import type { PortfolioTransactionListItem } from "../../services/portfolio.services";
 import { formatCurrency } from "../../utils/formatCurrency";
 
@@ -19,6 +19,8 @@ interface TransactionHistorySectionProps {
   onShowMore: () => void;
   filterSymbol: string | null;
   onClearFilter: () => void;
+  onEditTransaction: (transaction: PortfolioTransactionListItem) => void;
+  onDeleteTransaction: (transaction: PortfolioTransactionListItem) => void;
 }
 
 // ส่วน "ประวัติการซื้อขาย" พร้อม filter ตาม asset และ pagination แบบ "ดูเพิ่มเติม"
@@ -28,6 +30,8 @@ export function TransactionHistorySection({
   onShowMore,
   filterSymbol,
   onClearFilter,
+  onEditTransaction,
+  onDeleteTransaction,
 }: TransactionHistorySectionProps) {
   const visibleTransactions = transactions.slice(0, visibleCount);
 
@@ -81,13 +85,33 @@ export function TransactionHistorySection({
                       {formatShortDate(transaction.transactionDate)}
                     </p>
                   </div>
-                  <p className="shrink-0 text-sm font-bold">
-                    ฿
-                    {formatCurrency(
-                      Number(transaction.quantity) *
-                        Number(transaction.pricePerUnit),
-                    )}
-                  </p>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <p className="text-sm font-bold">
+                      ฿
+                      {formatCurrency(
+                        Number(transaction.quantity) *
+                          Number(transaction.pricePerUnit),
+                      )}
+                    </p>
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => onEditTransaction(transaction)}
+                        aria-label="แก้ไขรายการ"
+                        className="flex size-8 items-center justify-center rounded-full text-[#5C6899] transition hover:bg-[#EEF1FC] hover:text-[#7566C7]"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteTransaction(transaction)}
+                        aria-label="ลบรายการ"
+                        className="flex size-8 items-center justify-center rounded-full text-[#5C6899] transition hover:bg-[#FFE3EC] hover:text-[#CF3D6B]"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
                 </li>
               );
             })}
