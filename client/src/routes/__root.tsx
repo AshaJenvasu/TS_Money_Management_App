@@ -115,12 +115,19 @@ function RootLayout() {
                     Wallets
                   </Link>
 
-                  <button
-                    onClick={() => alert("ยังไม่ได้ทำนะจ้ะ")}
-                    className="cursor-pointer rounded-full border border-[#5568E0]/50 px-4 py-2 text-sm font-semibold text-[#BFD3F3] transition hover:bg-[#5568E0]/20"
+                  <Link
+                    to="/investment"
+                    activeProps={{
+                      className: "bg-[#5568E0] text-white",
+                    }}
+                    inactiveProps={{
+                      className:
+                        "border border-[#5568E0]/50 text-[#BFD3F3] hover:bg-[#5568E0]/20",
+                    }}
+                    className="rounded-full px-4 py-2 text-sm font-semibold no-underline transition"
                   >
                     Investment
-                  </button>
+                  </Link>
                 </nav>
 
                 <div className="flex items-center gap-2 rounded-full border border-[#BFD3F3]/25 bg-[#1E2A66]/60 px-3.5 py-1.5 text-xs font-['Mali']">
@@ -238,15 +245,20 @@ function RootLayout() {
                     Wallets
                   </Link>
 
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      alert("ยังไม่ได้ทำนะจ้ะ");
+                  <Link
+                    to="/investment"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="rounded-xl border border-[#5568E0]/50 px-4 py-3 text-left text-sm font-semibold text-[#BFD3F3] no-underline transition hover:bg-[#5568E0]/20"
+                    activeProps={{
+                      className: "bg-[#5568E0] text-white",
                     }}
-                    className="rounded-xl border border-[#5568E0]/50 px-4 py-3 text-left text-sm font-semibold text-[#BFD3F3]"
+                    inactiveProps={{
+                      className:
+                        "border border-[#5568E0]/50 text-[#BFD3F3] hover:bg-[#5568E0]/20",
+                    }}
                   >
                     Investment
-                  </button>
+                  </Link>
 
                   <button
                     onClick={() => {

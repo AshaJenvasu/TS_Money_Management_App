@@ -1,7 +1,9 @@
 import { ChartNoAxesCombined, CircleAlert } from "lucide-react";
 import { usePortfolioQuery } from "../../hooks/usePortfolioQuery";
+import { useNavigate } from "@tanstack/react-router";
 
 export function PortfolioCard() {
+  const navigate = useNavigate();
   const { data, isPending, isError } = usePortfolioQuery();
 
   const holdings = data?.holdings ?? [];
@@ -13,7 +15,18 @@ export function PortfolioCard() {
   );
 
   return (
-    <div className="card border border-white/80 bg-white/70 shadow-sm">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => navigate({ to: "/investment" })}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          navigate({ to: "/investment" });
+        }
+      }}
+      className="card cursor-pointer border border-white/80 bg-white/70 shadow-sm transition hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7566C7]"
+    >
       <div className="card-body gap-4 p-5">
         <div className="flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-2xl bg-[#EAE5FF] text-[#7566C7]">

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as InvestmentRouteImport } from './routes/investment'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as WalletsIndexRouteImport } from './routes/wallets.index'
@@ -24,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvestmentRoute = InvestmentRouteImport.update({
+  id: '/investment',
+  path: '/investment',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -50,6 +56,7 @@ const WalletsWalletIdRoute = WalletsWalletIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/investment': typeof InvestmentRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/wallets/$walletId': typeof WalletsWalletIdRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/investment': typeof InvestmentRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/wallets/$walletId': typeof WalletsWalletIdRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/investment': typeof InvestmentRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/wallets/$walletId': typeof WalletsWalletIdRoute
@@ -77,6 +86,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/investment'
     | '/login'
     | '/register'
     | '/wallets/$walletId'
@@ -85,6 +95,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/dashboard'
+    | '/investment'
     | '/login'
     | '/register'
     | '/wallets/$walletId'
@@ -93,6 +104,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/investment'
     | '/login'
     | '/register'
     | '/wallets/$walletId'
@@ -102,6 +114,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
+  InvestmentRoute: typeof InvestmentRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   WalletsWalletIdRoute: typeof WalletsWalletIdRoute
@@ -122,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/investment': {
+      id: '/investment'
+      path: '/investment'
+      fullPath: '/investment'
+      preLoaderRoute: typeof InvestmentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -158,6 +178,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
+  InvestmentRoute: InvestmentRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   WalletsWalletIdRoute: WalletsWalletIdRoute,
