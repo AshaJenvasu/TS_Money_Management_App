@@ -30,6 +30,8 @@
     "lint-format": "bunx --bun @biomejs/biome check --write",
     "test": "vitest",
     "dev": "bun run --hot src/index.ts | pino-pretty -c",
+    "build": "prisma generate",
+    "postinstall": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "db:push": "bun prisma db push",
