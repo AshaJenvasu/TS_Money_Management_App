@@ -2,6 +2,7 @@ import { sign } from "hono/jwt";
 import { UserRepository } from "../repositories/user.repository";
 import { prisma } from "../config/prisma";
 import { PortfolioRepository } from "../repositories/portfolio.repository";
+import bcrypt from "bcryptjs";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -27,7 +28,7 @@ export class AuthService {
     }
 
     // 2. Hash Password
-    const hashedPassword = await Bun.password.hash(data.password);
+    const hashedPassword = await bcrypt.hash(data.password, 10);
 
     // 3. สร้าง User ผ่าน UserRepository
     const newUser = await prisma.$transaction(async (tx) => {
@@ -63,7 +64,7 @@ export class AuthService {
     }
 
     // 2. Verify Password
-    const isPasswordValid = await Bun.password.verify(
+    const isPasswordValid = await bcrypt.compare(
       data.password,
       user.passwordHash,
     );
