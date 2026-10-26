@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://ts-money-management-app-ocde.vercel.app"
+      "destination": "https://serverts-money-management-app-git-781c00-ashajenvasus-projects.vercel.app"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
