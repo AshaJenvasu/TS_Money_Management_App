@@ -1,6 +1,6 @@
 import { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { logger } from "../utils/logger";
+import { logger } from "../utils/logger.js";
 
 /**
  * Global Error Handler Middleware สำหรับดักจับ Unhandled Error ทั้งหมดใน Application

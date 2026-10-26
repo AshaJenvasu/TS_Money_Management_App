@@ -1,5 +1,5 @@
-import { prisma } from "../config/prisma";
-import { TransactionRepository } from "../repositories/transaction.repository";
+import { prisma } from "../config/prisma.js";
+import { TransactionRepository } from "../repositories/transaction.repository.js";
 import { TransactionType } from "@prisma/client";
 
 export class TransactionService {

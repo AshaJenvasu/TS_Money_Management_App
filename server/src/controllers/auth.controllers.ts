@@ -1,12 +1,12 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { AuthService } from "../services/auth.services";
+import { AuthService } from "../services/auth.services.js";
 import { createRoute } from "@hono/zod-openapi";
 import {
   LoginBodySchema,
   LoginResponseSchema,
   RegisterBodySchema,
   RegisterResponseSchema,
-} from "../schema/auth.schema";
+} from "../schema/auth.schema.js";
 import { setCookie, deleteCookie } from "hono/cookie";
 import { z } from "zod";
 

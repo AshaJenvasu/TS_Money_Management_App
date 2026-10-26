@@ -1,16 +1,16 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 import { pinoLogger } from "hono-pino";
-import { logger } from "./utils/logger";
-import { globalErrorHandler } from "./middlewares/error.middleware";
+import { logger } from "./utils/logger.js";
+import { globalErrorHandler } from "./middlewares/error.middleware.js";
 
-import { userController } from "./controllers/user.controllers";
-import { healthController } from "./health/health.controllers";
-import { authController } from "./controllers/auth.controllers";
-import { walletController } from "./controllers/wallet.controllers";
-import { transactionController } from "./controllers/transaction.controllers";
-import { assetController } from "./controllers/asset.controllers";
-import { portfolioController } from "./controllers/portfolio.controllers";
+import { userController } from "./controllers/user.controllers.js";
+import { healthController } from "./health/health.controllers.js";
+import { authController } from "./controllers/auth.controllers.js";
+import { walletController } from "./controllers/wallet.controllers.js";
+import { transactionController } from "./controllers/transaction.controllers.js";
+import { assetController } from "./controllers/asset.controllers.js";
+import { portfolioController } from "./controllers/portfolio.controllers.js";
 import { cors } from "hono/cors";
 
 const app = new OpenAPIHono();

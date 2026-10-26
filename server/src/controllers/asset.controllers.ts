@@ -1,7 +1,7 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
-import { AssetService } from "../services/asset.services";
+import { AssetService } from "../services/asset.services.js";
 import { AssetType } from "@prisma/client";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
 import {
   CreateAssetBodySchema,
   UpdateAssetBodySchema,
@@ -10,7 +10,7 @@ import {
   AssetListResponseSchema,
   AssetHoldingResponseSchema,
   ErrorResponseSchema,
-} from "../schema/asset.schema";
+} from "../schema/asset.schema.js";
 
 export const assetController = new OpenAPIHono();
 

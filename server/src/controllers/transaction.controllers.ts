@@ -1,6 +1,6 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
-import { authMiddleware } from "../middlewares/auth.middleware";
-import { TransactionService } from "../services/transaction.services";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
+import { TransactionService } from "../services/transaction.services.js";
 import { TransactionType } from "@prisma/client";
 import {
   WalletIdParamSchema,
@@ -8,7 +8,7 @@ import {
   CreateTransactionBodySchema,
   UpdateTransactionBodySchema,
   TransactionPaginationQuerySchema,
-} from "../schema/transaction.schema";
+} from "../schema/transaction.schema.js";
 
 export const transactionController = new OpenAPIHono();
 

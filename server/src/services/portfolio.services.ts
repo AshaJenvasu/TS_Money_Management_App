@@ -1,6 +1,6 @@
-import { prisma } from "../config/prisma";
+import { prisma } from "../config/prisma.js";
 import { Prisma, PortfolioTransactionType } from "@prisma/client";
-import { PortfolioRepository } from "../repositories/portfolio.repository";
+import { PortfolioRepository } from "../repositories/portfolio.repository.js";
 
 interface CreatePortfolioTransactionInput {
   userId: bigint;

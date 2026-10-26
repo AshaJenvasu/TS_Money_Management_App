@@ -1,5 +1,5 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
 import {
   WalletListResponseSchema,
   WalletCreateSchema,
@@ -8,8 +8,8 @@ import {
   WalletUpdateSchema,
   WalletBalanceResponseSchema,
   WalletPublicIdParamSchema,
-} from "../schema/wallet.schema";
-import { WalletService } from "../services/wallet.services";
+} from "../schema/wallet.schema.js";
+import { WalletService } from "../services/wallet.services.js";
 
 export const walletController = new OpenAPIHono();
 

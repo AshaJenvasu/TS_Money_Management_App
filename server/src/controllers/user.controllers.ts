@@ -1,7 +1,7 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
-import { authMiddleware } from "../middlewares/auth.middleware";
-import { UserParamsSchema, UserResponseSchema } from "../schema/user.schema";
-import { userProfileResponseSchema } from "../schema/auth.schema";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
+import { UserParamsSchema, UserResponseSchema } from "../schema/user.schema.js";
+import { userProfileResponseSchema } from "../schema/auth.schema.js";
 
 export const userController = new OpenAPIHono();
 

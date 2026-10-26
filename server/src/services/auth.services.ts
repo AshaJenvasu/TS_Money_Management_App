@@ -1,7 +1,7 @@
 import { sign } from "hono/jwt";
-import { UserRepository } from "../repositories/user.repository";
-import { prisma } from "../config/prisma";
-import { PortfolioRepository } from "../repositories/portfolio.repository";
+import { UserRepository } from "../repositories/user.repository.js";
+import { prisma } from "../config/prisma.js";
+import { PortfolioRepository } from "../repositories/portfolio.repository.js";
 import bcrypt from "bcryptjs";
 
 const JWT_SECRET = process.env.JWT_SECRET;

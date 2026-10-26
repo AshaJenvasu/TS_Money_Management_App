@@ -11,8 +11,8 @@ import {
   DeletePortfolioTransactionParamsSchema,
   DeletePortfolioTransactionResponseSchema,
   GetPortfolioTransactionsResponseSchema,
-} from "../schema/portfolio.schema";
-import { PortfolioService } from "../services/portfolio.services";
+} from "../schema/portfolio.schema.js";
+import { PortfolioService } from "../services/portfolio.services.js";
 
 // กำหนด API สำหรับอ่านภาพรวมพอร์ต
 const getPortfolioRoute = createRoute({

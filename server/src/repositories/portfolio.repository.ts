@@ -1,4 +1,4 @@
-import { prisma } from "../config/prisma";
+import { prisma } from "../config/prisma.js";
 import { Prisma } from "@prisma/client";
 import { PortfolioTransactionType } from "@prisma/client";
 

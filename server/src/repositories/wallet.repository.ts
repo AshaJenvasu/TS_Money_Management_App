@@ -1,4 +1,4 @@
-import { prisma } from "../config/prisma";
+import { prisma } from "../config/prisma.js";
 
 export class WalletRepository {
   // 1. ดึงรายการ Wallet ทั้งหมด(findmany)ของผู้ใช้ โดยเรียงลำดับจากสร้างใหม่ไปเก่า

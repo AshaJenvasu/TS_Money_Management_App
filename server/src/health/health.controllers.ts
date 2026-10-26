@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { getServerHealthRoute, getDatabaseHealthRoute } from "./health.schema";
-import { prisma } from "../config/prisma";
+import { getServerHealthRoute, getDatabaseHealthRoute } from "./health.schema.js";
+import { prisma } from "../config/prisma.js";
 
 export const healthController = new OpenAPIHono();
 

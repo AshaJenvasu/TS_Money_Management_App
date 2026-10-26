@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { prisma } from "../config/prisma";
+import { prisma } from "../config/prisma.js";
 
 // Type Helper สำหรับ Best Practice รองรับทั้ง Prisma Standard Client และ Transaction Client
 export type DbClient = PrismaClient | Prisma.TransactionClient;

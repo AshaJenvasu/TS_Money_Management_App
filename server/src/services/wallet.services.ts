@@ -1,4 +1,4 @@
-import { WalletRepository } from "../repositories/wallet.repository";
+import { WalletRepository } from "../repositories/wallet.repository.js";
 
 export class WalletService {
   // 1. Service: getWallets

@@ -1,4 +1,4 @@
-import { AssetRepository } from "../repositories/asset.repository";
+import { AssetRepository } from "../repositories/asset.repository.js";
 import { AssetType, Prisma } from "@prisma/client";
 import { HTTPException } from "hono/http-exception";
 
