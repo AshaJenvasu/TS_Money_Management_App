@@ -20,7 +20,7 @@ RUN bunx prisma generate
 # ติดตั้งเฉพาะ production dependencies แยกต่างหาก ไม่มี devDependencies ติดมาด้วยเลย
 FROM base AS prod-deps
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile --production
+RUN bun install --frozen-lockfile --production --ignore-scripts
 
 
 # Production image: ใช้ node_modules สะอาดจาก prod-deps แล้วเอา Prisma Client ที่ generate ไว้มาแปะทับ
