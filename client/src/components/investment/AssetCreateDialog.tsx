@@ -101,110 +101,118 @@ export function AssetCreateDialog({ onClose }: AssetCreateDialogProps) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <label className="form-control">
-            <span className="label-text mb-2 font-medium text-[#39365F]">
-              Symbol
-            </span>
-            <input
-              type="text"
-              className="input input-bordered w-full bg-white uppercase text-[#39365F] focus:border-[#7566C7] focus:outline-none"
-              placeholder="เช่น BTC"
-              value={symbol}
-              onChange={(e) => {
-                setSymbol(e.target.value);
-                setValidationError("");
-                setErrorMessage("");
-              }}
-              maxLength={10}
-              autoFocus
-              disabled={createMutation.isPending}
-            />
-          </label>
-
-          <label className="form-control">
-            <span className="label-text mb-2 font-medium text-[#39365F]">
-              Name
-            </span>
-            <input
-              type="text"
-              className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
-              placeholder="เช่น Bitcoin"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                setValidationError("");
-                setErrorMessage("");
-              }}
-              maxLength={100}
-              disabled={createMutation.isPending}
-            />
-          </label>
-
-          <div className="form-control">
-            <span className="label-text mb-2 font-medium text-[#39365F]">
-              Type
-            </span>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setAssetType("crypto")}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleCreate();
+          }}
+        >
+          <div className="flex flex-col gap-4">
+            <label className="form-control">
+              <span className="label-text mb-2 font-medium text-[#39365F]">
+                Symbol
+              </span>
+              <input
+                type="text"
+                className="input input-bordered w-full bg-white uppercase text-[#39365F] focus:border-[#7566C7] focus:outline-none"
+                placeholder="เช่น BTC"
+                value={symbol}
+                onChange={(e) => {
+                  setSymbol(e.target.value);
+                  setValidationError("");
+                  setErrorMessage("");
+                }}
+                maxLength={10}
+                autoFocus
                 disabled={createMutation.isPending}
-                className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition ${
-                  assetType === "crypto"
-                    ? "border-[#7566C7] bg-[#EAE5FF] text-[#7566C7]"
-                    : "border-gray-200 text-gray-500"
-                }`}
-              >
-                Crypto
-              </button>
-              <button
-                type="button"
-                onClick={() => setAssetType("stock")}
+              />
+            </label>
+
+            <label className="form-control">
+              <span className="label-text mb-2 font-medium text-[#39365F]">
+                Name
+              </span>
+              <input
+                type="text"
+                className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
+                placeholder="เช่น Bitcoin"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setValidationError("");
+                  setErrorMessage("");
+                }}
+                maxLength={100}
                 disabled={createMutation.isPending}
-                className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition ${
-                  assetType === "stock"
-                    ? "border-[#7566C7] bg-[#EAE5FF] text-[#7566C7]"
-                    : "border-gray-200 text-gray-500"
-                }`}
-              >
-                Stock
-              </button>
+              />
+            </label>
+
+            <div className="form-control">
+              <span className="label-text mb-2 font-medium text-[#39365F]">
+                Type
+              </span>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setAssetType("crypto")}
+                  disabled={createMutation.isPending}
+                  className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition ${
+                    assetType === "crypto"
+                      ? "border-[#7566C7] bg-[#EAE5FF] text-[#7566C7]"
+                      : "border-gray-200 text-gray-500"
+                  }`}
+                >
+                  Crypto
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAssetType("stock")}
+                  disabled={createMutation.isPending}
+                  className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition ${
+                    assetType === "stock"
+                      ? "border-[#7566C7] bg-[#EAE5FF] text-[#7566C7]"
+                      : "border-gray-200 text-gray-500"
+                  }`}
+                >
+                  Stock
+                </button>
+              </div>
             </div>
+
+            {validationError && (
+              <p className="text-sm text-error">{validationError}</p>
+            )}
+            {errorMessage && (
+              <p className="text-sm text-error">{errorMessage}</p>
+            )}
           </div>
 
-          {validationError && (
-            <p className="text-sm text-error">{validationError}</p>
-          )}
-          {errorMessage && <p className="text-sm text-error">{errorMessage}</p>}
-        </div>
+          <div className="mt-8 flex justify-end gap-3">
+            <button
+              type="button"
+              className="btn"
+              onClick={onClose}
+              disabled={createMutation.isPending}
+            >
+              ยกเลิก
+            </button>
 
-        <div className="mt-8 flex justify-end gap-3">
-          <button
-            type="button"
-            className="btn"
-            onClick={onClose}
-            disabled={createMutation.isPending}
-          >
-            ยกเลิก
-          </button>
-
-          <button
-            type="button"
-            className="btn border-0 bg-[#7566C7] text-white hover:bg-[#6356B8]"
-            onClick={handleCreate}
-            disabled={createMutation.isPending}
-          >
-            {createMutation.isPending ? (
-              <>
-                <span className="loading loading-spinner loading-sm" />
-                กำลังสร้าง...
-              </>
-            ) : (
-              "สร้างสินทรัพย์"
-            )}
-          </button>
-        </div>
+            <button
+              type="submit"
+              className="btn border-0 bg-[#7566C7] text-white hover:bg-[#6356B8]"
+              disabled={createMutation.isPending}
+            >
+              {createMutation.isPending ? (
+                <>
+                  <span className="loading loading-spinner loading-sm" />
+                  กำลังสร้าง...
+                </>
+              ) : (
+                "สร้างสินทรัพย์"
+              )}
+            </button>
+          </div>
+        </form>
       </div>
 
       <button

@@ -174,133 +174,141 @@ export function TransactionCreateDialog({
           </button>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <label className="form-control">
-            <span className="label-text mb-2 font-medium text-[#39365F]">
-              Asset
-            </span>
-            <select
-              className="select select-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
-              value={assetId}
-              onChange={(e) => {
-                setAssetId(e.target.value);
-                setValidationError("");
-                setErrorMessage("");
-              }}
-              disabled={createMutation.isPending}
-            >
-              {assetViews.map((view) => (
-                <option key={view.asset.id} value={view.asset.id}>
-                  {view.asset.symbol} — {view.asset.name}
-                </option>
-              ))}
-            </select>
-            {transactionType === "sell" && selectedAssetView && (
-              <span className="mt-1 text-xs text-[#5C6899]">
-                ถืออยู่ {selectedAssetView.quantity}{" "}
-                {selectedAssetView.asset.symbol}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleCreate();
+          }}
+        >
+          <div className="flex flex-col gap-4">
+            <label className="form-control">
+              <span className="label-text mb-2 font-medium text-[#39365F]">
+                Asset
               </span>
-            )}
-          </label>
+              <select
+                className="select select-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
+                value={assetId}
+                onChange={(e) => {
+                  setAssetId(e.target.value);
+                  setValidationError("");
+                  setErrorMessage("");
+                }}
+                disabled={createMutation.isPending}
+              >
+                {assetViews.map((view) => (
+                  <option key={view.asset.id} value={view.asset.id}>
+                    {view.asset.symbol} — {view.asset.name}
+                  </option>
+                ))}
+              </select>
+              {transactionType === "sell" && selectedAssetView && (
+                <span className="mt-1 text-xs text-[#5C6899]">
+                  ถืออยู่ {selectedAssetView.quantity}{" "}
+                  {selectedAssetView.asset.symbol}
+                </span>
+              )}
+            </label>
 
-          <label className="form-control">
-            <span className="label-text mb-2 font-medium text-[#39365F]">
-              Quantity
-            </span>
-            <input
-              type="number"
-              step="any"
-              min="0"
-              className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
-              placeholder="0.01"
-              value={quantity}
-              onChange={(e) => {
-                setQuantity(e.target.value);
-                setValidationError("");
-                setErrorMessage("");
-              }}
-              disabled={createMutation.isPending}
-            />
-          </label>
-
-          <label className="form-control">
-            <span className="label-text mb-2 font-medium text-[#39365F]">
-              Price / Unit
-            </span>
-            <input
-              type="number"
-              step="any"
-              min="0"
-              className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
-              placeholder="2,000,000"
-              value={pricePerUnit}
-              onChange={(e) => {
-                setPricePerUnit(e.target.value);
-                setValidationError("");
-                setErrorMessage("");
-              }}
-              disabled={createMutation.isPending}
-            />
-          </label>
-
-          <label className="form-control">
-            <span className="label-text mb-2 font-medium text-[#39365F]">
-              Date
-            </span>
-            <input
-              type="date"
-              className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
-              value={date}
-              onChange={(e) => {
-                setDate(e.target.value);
-                setValidationError("");
-                setErrorMessage("");
-              }}
-              disabled={createMutation.isPending}
-            />
-          </label>
-
-          <div className="rounded-xl bg-[#F3F5FD] px-4 py-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-[#5C6899]">Total</span>
-              <span className="text-lg font-extrabold text-[#1F2A5C]">
-                ฿{formatCurrency(total)}
+            <label className="form-control">
+              <span className="label-text mb-2 font-medium text-[#39365F]">
+                Quantity
               </span>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
+                placeholder="0.01"
+                value={quantity}
+                onChange={(e) => {
+                  setQuantity(e.target.value);
+                  setValidationError("");
+                  setErrorMessage("");
+                }}
+                disabled={createMutation.isPending}
+              />
+            </label>
+
+            <label className="form-control">
+              <span className="label-text mb-2 font-medium text-[#39365F]">
+                Price / Unit
+              </span>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
+                placeholder="2,000,000"
+                value={pricePerUnit}
+                onChange={(e) => {
+                  setPricePerUnit(e.target.value);
+                  setValidationError("");
+                  setErrorMessage("");
+                }}
+                disabled={createMutation.isPending}
+              />
+            </label>
+
+            <label className="form-control">
+              <span className="label-text mb-2 font-medium text-[#39365F]">
+                Date
+              </span>
+              <input
+                type="date"
+                className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
+                value={date}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  setValidationError("");
+                  setErrorMessage("");
+                }}
+                disabled={createMutation.isPending}
+              />
+            </label>
+
+            <div className="rounded-xl bg-[#F3F5FD] px-4 py-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-[#5C6899]">Total</span>
+                <span className="text-lg font-extrabold text-[#1F2A5C]">
+                  ฿{formatCurrency(total)}
+                </span>
+              </div>
             </div>
+
+            {validationError && (
+              <p className="text-sm text-error">{validationError}</p>
+            )}
+            {errorMessage && (
+              <p className="text-sm text-error">{errorMessage}</p>
+            )}
           </div>
 
-          {validationError && (
-            <p className="text-sm text-error">{validationError}</p>
-          )}
-          {errorMessage && <p className="text-sm text-error">{errorMessage}</p>}
-        </div>
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              className="btn"
+              onClick={onClose}
+              disabled={createMutation.isPending}
+            >
+              ยกเลิก
+            </button>
 
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            className="btn"
-            onClick={onClose}
-            disabled={createMutation.isPending}
-          >
-            ยกเลิก
-          </button>
-
-          <button
-            type="button"
-            className="btn border-0 bg-[#7566C7] text-white hover:bg-[#6356B8]"
-            onClick={handleCreate}
-            disabled={createMutation.isPending}
-          >
-            {createMutation.isPending ? (
-              <>
-                <span className="loading loading-spinner loading-sm" />
-                กำลังบันทึก...
-              </>
-            ) : (
-              "สร้าง"
-            )}
-          </button>
-        </div>
+            <button
+              type="submit"
+              className="btn border-0 bg-[#7566C7] text-white hover:bg-[#6356B8]"
+              disabled={createMutation.isPending}
+            >
+              {createMutation.isPending ? (
+                <>
+                  <span className="loading loading-spinner loading-sm" />
+                  กำลังบันทึก...
+                </>
+              ) : (
+                "สร้าง"
+              )}
+            </button>
+          </div>
+        </form>
       </div>
 
       <button

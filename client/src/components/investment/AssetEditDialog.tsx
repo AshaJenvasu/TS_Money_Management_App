@@ -101,82 +101,91 @@ export function AssetEditDialog({ assetView, onClose }: AssetEditDialogProps) {
           </p>
         )}
 
-        <div className="flex flex-col gap-4">
-          <label className="form-control">
-            <span className="label-text mb-2 font-medium text-[#39365F]">
-              Symbol
-            </span>
-            <input
-              type="text"
-              className="input input-bordered w-full bg-gray-100 text-[#39365F]"
-              value={asset.symbol}
-              disabled
-            />
-          </label>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleUpdate();
+          }}
+        >
+          <div className="flex flex-col gap-4">
+            <label className="form-control">
+              <span className="label-text mb-2 font-medium text-[#39365F]">
+                Symbol
+              </span>
+              <input
+                type="text"
+                className="input input-bordered w-full bg-gray-100 text-[#39365F]"
+                value={asset.symbol}
+                disabled
+              />
+            </label>
 
-          <label className="form-control">
-            <span className="label-text mb-2 font-medium text-[#39365F]">
-              Name
-            </span>
-            <input
-              type="text"
-              className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                setValidationError("");
-                setErrorMessage("");
-              }}
-              maxLength={100}
-              autoFocus
-              disabled={hasTransactionHistory || updateMutation.isPending}
-            />
-          </label>
+            <label className="form-control">
+              <span className="label-text mb-2 font-medium text-[#39365F]">
+                Name
+              </span>
+              <input
+                type="text"
+                className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setValidationError("");
+                  setErrorMessage("");
+                }}
+                maxLength={100}
+                autoFocus
+                disabled={hasTransactionHistory || updateMutation.isPending}
+              />
+            </label>
 
-          <label className="form-control">
-            <span className="label-text mb-2 font-medium text-[#39365F]">
-              Type
-            </span>
-            <input
-              type="text"
-              className="input input-bordered w-full bg-gray-100 text-[#39365F]"
-              value={asset.asset_type === "stock" ? "Stock" : "Crypto"}
-              disabled
-            />
-          </label>
+            <label className="form-control">
+              <span className="label-text mb-2 font-medium text-[#39365F]">
+                Type
+              </span>
+              <input
+                type="text"
+                className="input input-bordered w-full bg-gray-100 text-[#39365F]"
+                value={asset.asset_type === "stock" ? "Stock" : "Crypto"}
+                disabled
+              />
+            </label>
 
-          {validationError && (
-            <p className="text-sm text-error">{validationError}</p>
-          )}
-          {errorMessage && <p className="text-sm text-error">{errorMessage}</p>}
-        </div>
-
-        <div className="mt-8 flex justify-end gap-3">
-          <button
-            type="button"
-            className="btn"
-            onClick={onClose}
-            disabled={updateMutation.isPending}
-          >
-            ยกเลิก
-          </button>
-
-          <button
-            type="button"
-            className="btn border-0 bg-[#7566C7] text-white hover:bg-[#6356B8]"
-            onClick={handleUpdate}
-            disabled={hasTransactionHistory || updateMutation.isPending}
-          >
-            {updateMutation.isPending ? (
-              <>
-                <span className="loading loading-spinner loading-sm" />
-                กำลังบันทึก...
-              </>
-            ) : (
-              "บันทึก"
+            {validationError && (
+              <p className="text-sm text-error">{validationError}</p>
             )}
-          </button>
-        </div>
+            {errorMessage && (
+              <p className="text-sm text-error">{errorMessage}</p>
+            )}
+          </div>
+
+          <div className="mt-8 flex justify-end gap-3">
+            <button
+              type="button"
+              className="btn"
+              onClick={onClose}
+              disabled={updateMutation.isPending}
+            >
+              ยกเลิก
+            </button>
+
+            <button
+              type="submit"
+              className="btn border-0 bg-[#7566C7] text-white hover:bg-[#6356B8]"
+
+              disabled={hasTransactionHistory || updateMutation.isPending}
+            >
+              {updateMutation.isPending ? (
+                <>
+                  <span className="loading loading-spinner loading-sm" />
+                  กำลังบันทึก...
+                </>
+              ) : (
+                "บันทึก"
+              )}
+            </button>
+          </div>
+        </form>
       </div>
 
       <button

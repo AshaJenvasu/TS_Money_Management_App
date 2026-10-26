@@ -232,6 +232,7 @@ export function WalletCard({ wallet }: WalletCardProps) {
           <div
             className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           >
             <div className="w-full max-w-lg rounded-2xl bg-white p-8 shadow-2xl ">
               <div className="flex items-center gap-3 mb-4">
@@ -249,58 +250,64 @@ export function WalletCard({ wallet }: WalletCardProps) {
                 </div>
               </div>
 
-              <label className="form-control mt-8">
-                <span className="label-text mb-2 font-medium text-[#39365F]">
-                  Wallet Name
-                </span>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleUpdateWallet();
+                }}
+              >
+                <label className="form-control mt-8">
+                  <span className="label-text mb-2 font-medium text-[#39365F]">
+                    Wallet Name
+                  </span>
 
-                <input
-                  type="text"
-                  className="input input-bordered w-full bg-white text-[#39365F] placeholder:text-gray-400 focus:border-[#7566C7] focus:outline-none mt-2"
-                  placeholder="Enter wallet name"
-                  value={walletName}
-                  onChange={(e) => {
-                    setWalletName(e.target.value);
-                    setValidationError("");
-                    setErrorMessage("");
-                  }}
-                  maxLength={100}
-                  autoFocus
-                />
-                {validationError && (
-                  <p className="mt-2 text-sm text-error">{validationError}</p>
+                  <input
+                    type="text"
+                    className="input input-bordered w-full bg-white text-[#39365F] placeholder:text-gray-400 focus:border-[#7566C7] focus:outline-none mt-2"
+                    placeholder="Enter wallet name"
+                    value={walletName}
+                    onChange={(e) => {
+                      setWalletName(e.target.value);
+                      setValidationError("");
+                      setErrorMessage("");
+                    }}
+                    maxLength={100}
+                    autoFocus
+                  />
+                  {validationError && (
+                    <p className="mt-2 text-sm text-error">{validationError}</p>
+                  )}
+                </label>
+
+                {errorMessage && (
+                  <p className="mt-3 text-sm text-error">{errorMessage}</p>
                 )}
-              </label>
 
-              {errorMessage && (
-                <p className="mt-3 text-sm text-error">{errorMessage}</p>
-              )}
+                <div className="mt-8 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => setIsEditOpen(false)}
+                    disabled={updateMutation.isPending}
+                  >
+                    ยกเลิก
+                  </button>
 
-              <div className="mt-8 flex justify-end gap-3">
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => setIsEditOpen(false)}
-                  disabled={updateMutation.isPending}
-                >
-                  ยกเลิก
-                </button>
-
-                <button
-                  type="button"
-                  className="btn border-0 bg-[#7566C7] text-white hover:bg-[#6356B8]"
-                  disabled={
-                    !walletName.trim() ||
-                    walletName.trim() === wallet.name ||
-                    updateMutation.isPending
-                  }
-                  onClick={handleUpdateWallet}
-                >
-                  {updateMutation.isPending
-                    ? "Saving..."
-                    : "บันทึกการเปลี่ยนแปลง"}
-                </button>
-              </div>
+                  <button
+                    type="submit"
+                    className="btn border-0 bg-[#7566C7] text-white hover:bg-[#6356B8]"
+                    disabled={
+                      !walletName.trim() ||
+                      walletName.trim() === wallet.name ||
+                      updateMutation.isPending
+                    }
+                  >
+                    {updateMutation.isPending
+                      ? "Saving..."
+                      : "บันทึกการเปลี่ยนแปลง"}
+                  </button>
+                </div>
+              </form>
             </div>
 
             <button
@@ -315,7 +322,11 @@ export function WalletCard({ wallet }: WalletCardProps) {
       {/* Delete Popup */}
       {isDeleteOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
             <div className="w-full max-w-lg rounded-2xl bg-white p-8 shadow-2xl">
               <div className="flex items-center gap-3">
                 <div className="flex size-12 items-center justify-center rounded-xl bg-red-100 text-red-600">

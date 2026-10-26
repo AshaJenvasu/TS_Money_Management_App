@@ -140,115 +140,124 @@ export function TransactionEditDialog({
           </button>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <label className="form-control">
-            <span className="label-text mb-2 font-medium text-[#39365F]">
-              Asset
-            </span>
-            <input
-              type="text"
-              className="input input-bordered w-full bg-gray-100 text-[#39365F]"
-              value={`${transaction.symbol} — ${transaction.assetName}`}
-              disabled
-            />
-          </label>
-
-          <label className="form-control">
-            <span className="label-text mb-2 font-medium text-[#39365F]">
-              Quantity
-            </span>
-            <input
-              type="number"
-              step="any"
-              min="0"
-              className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
-              value={quantity}
-              onChange={(e) => {
-                setQuantity(e.target.value);
-                setValidationError("");
-                setErrorMessage("");
-              }}
-              disabled={updateMutation.isPending}
-            />
-          </label>
-
-          <label className="form-control">
-            <span className="label-text mb-2 font-medium text-[#39365F]">
-              Price / Unit
-            </span>
-            <input
-              type="number"
-              step="any"
-              min="0"
-              className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
-              value={pricePerUnit}
-              onChange={(e) => {
-                setPricePerUnit(e.target.value);
-                setValidationError("");
-                setErrorMessage("");
-              }}
-              disabled={updateMutation.isPending}
-            />
-          </label>
-
-          <label className="form-control">
-            <span className="label-text mb-2 font-medium text-[#39365F]">
-              Date
-            </span>
-            <input
-              type="date"
-              className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
-              value={date}
-              onChange={(e) => {
-                setDate(e.target.value);
-                setValidationError("");
-                setErrorMessage("");
-              }}
-              disabled={updateMutation.isPending}
-            />
-          </label>
-
-          <div className="rounded-xl bg-[#F3F5FD] px-4 py-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-[#5C6899]">Total</span>
-              <span className="text-lg font-extrabold text-[#1F2A5C]">
-                ฿{formatCurrency(total)}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleUpdate();
+          }}
+        >
+          <div className="flex flex-col gap-4">
+            <label className="form-control">
+              <span className="label-text mb-2 font-medium text-[#39365F]">
+                Asset
               </span>
+              <input
+                type="text"
+                className="input input-bordered w-full bg-gray-100 text-[#39365F]"
+                value={`${transaction.symbol} — ${transaction.assetName}`}
+                disabled
+              />
+            </label>
+
+            <label className="form-control">
+              <span className="label-text mb-2 font-medium text-[#39365F]">
+                Quantity
+              </span>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
+                value={quantity}
+                onChange={(e) => {
+                  setQuantity(e.target.value);
+                  setValidationError("");
+                  setErrorMessage("");
+                }}
+                disabled={updateMutation.isPending}
+              />
+            </label>
+
+            <label className="form-control">
+              <span className="label-text mb-2 font-medium text-[#39365F]">
+                Price / Unit
+              </span>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
+                value={pricePerUnit}
+                onChange={(e) => {
+                  setPricePerUnit(e.target.value);
+                  setValidationError("");
+                  setErrorMessage("");
+                }}
+                disabled={updateMutation.isPending}
+              />
+            </label>
+
+            <label className="form-control">
+              <span className="label-text mb-2 font-medium text-[#39365F]">
+                Date
+              </span>
+              <input
+                type="date"
+                className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
+                value={date}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  setValidationError("");
+                  setErrorMessage("");
+                }}
+                disabled={updateMutation.isPending}
+              />
+            </label>
+
+            <div className="rounded-xl bg-[#F3F5FD] px-4 py-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-[#5C6899]">Total</span>
+                <span className="text-lg font-extrabold text-[#1F2A5C]">
+                  ฿{formatCurrency(total)}
+                </span>
+              </div>
             </div>
+
+            {validationError && (
+              <p className="text-sm text-error">{validationError}</p>
+            )}
+            {errorMessage && (
+              <p className="text-sm text-error">{errorMessage}</p>
+            )}
           </div>
 
-          {validationError && (
-            <p className="text-sm text-error">{validationError}</p>
-          )}
-          {errorMessage && <p className="text-sm text-error">{errorMessage}</p>}
-        </div>
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              className="btn"
+              onClick={onClose}
+              disabled={updateMutation.isPending}
+            >
+              ยกเลิก
+            </button>
 
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            className="btn"
-            onClick={onClose}
-            disabled={updateMutation.isPending}
-          >
-            ยกเลิก
-          </button>
+            <button
+              type="submit"
+              className="btn border-0 bg-[#7566C7] text-white hover:bg-[#6356B8]"
 
-          <button
-            type="button"
-            className="btn border-0 bg-[#7566C7] text-white hover:bg-[#6356B8]"
-            onClick={handleUpdate}
-            disabled={updateMutation.isPending}
-          >
-            {updateMutation.isPending ? (
-              <>
-                <span className="loading loading-spinner loading-sm" />
-                กำลังบันทึก...
-              </>
-            ) : (
-              "บันทึก"
-            )}
-          </button>
-        </div>
+              disabled={updateMutation.isPending}
+            >
+              {updateMutation.isPending ? (
+                <>
+                  <span className="loading loading-spinner loading-sm" />
+                  กำลังบันทึก...
+                </>
+              ) : (
+                "บันทึก"
+              )}
+            </button>
+          </div>
+        </form>
       </div>
 
       <button
