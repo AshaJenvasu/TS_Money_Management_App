@@ -64,11 +64,21 @@ export function LoginForm() {
       navigate({ to: "/dashboard" });
     } catch (err: unknown) {
       if (isAxiosError(err)) {
-        setErrorMsg(
-          err.response?.data?.message || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
-        );
+        if (err.response?.status === 401) {
+          setErrorMsg(
+            "อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้องนะ ลองตรวจสอบอีกครั้งน้า 😊",
+          );
+        } else if (!err.response) {
+          setErrorMsg(
+            "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้นะ ลองเช็กอินเทอร์เน็ตแล้วลองใหม่อีกครั้งน้า 🙏",
+          );
+        } else {
+          setErrorMsg(
+            "ระบบมีปัญหานิดหน่อย ไม่ใช่ความผิดของคุณนะ ลองใหม่อีกครั้งน้า 🙏",
+          );
+        }
       } else {
-        setErrorMsg("เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ กรุณาลองใหม่อีกครั้ง");
+        setErrorMsg("เกิดข้อผิดพลาดที่ไม่คาดคิดนะ ลองใหม่อีกครั้งน้า 🙏");
       }
     } finally {
       setLoading(false);
