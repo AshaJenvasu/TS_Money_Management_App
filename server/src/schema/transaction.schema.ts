@@ -51,8 +51,24 @@ export const TransactionPaginationQuerySchema = z.object({
     example: 1,
     description: "หน้าที่ต้องการดึงข้อมูล",
   }),
-  limit: z.coerce.number().int().min(1).max(100).default(5).openapi({
-    example: 5,
+  limit: z.coerce.number().int().min(1).max(100).default(10).openapi({
+    example: 10,
     description: "จำนวนรายการต่อหน้า",
   }),
 });
+
+// Query Schema สำหรับกรองตามช่วงวันที่ ต่อยอดจาก Pagination Schema เดิม (ไม่เขียน page/limit ซ้ำ)
+export const TransactionDateFilterQuerySchema =
+  TransactionPaginationQuerySchema.extend({
+    from: z.string().date().optional().openapi({
+      example: "2026-10-01",
+      description: "วันที่เริ่มต้น (YYYY-MM-DD)",
+    }),
+    to: z.string().date().optional().openapi({
+      example: "2026-10-31",
+      description: "วันที่สิ้นสุด (YYYY-MM-DD)",
+    }),
+  }).refine((data) => !data.from || !data.to || data.from <= data.to, {
+    message: "from ต้องไม่อยู่หลัง to",
+    path: ["from"],
+  });

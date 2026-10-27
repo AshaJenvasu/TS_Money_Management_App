@@ -8,6 +8,7 @@ import {
   CreateTransactionBodySchema,
   UpdateTransactionBodySchema,
   TransactionPaginationQuerySchema,
+  TransactionDateFilterQuerySchema,
 } from "../schema/transaction.schema.js";
 
 export const transactionController = new OpenAPIHono();
@@ -29,14 +30,12 @@ export const getTransactionsRoute = createRoute({
   security: [{ Bearer: [] }],
   request: {
     params: WalletIdParamSchema,
+    query: TransactionDateFilterQuerySchema,
   },
   responses: {
-    200: {
-      description: "Retrieve transactions successfully",
-    },
-    404: {
-      description: "Wallet not found",
-    },
+    200: { description: "Retrieve transactions successfully" },
+    400: { description: "Invalid query parameters (e.g. from is after to)" },
+    404: { description: "Wallet not found" },
   },
 });
 
@@ -133,20 +132,22 @@ export const getAllTransactionsRoute = createRoute({
 
 // 1. GET /wallets/:walletId/transactions
 transactionController.openapi(getTransactionsRoute, async (c) => {
-  // ดึง Parameter และ User ID จาก JWT Payload
+  // ดึง Parameter, Query (filter+pagination) และ User ID จาก JWT Payload
   const { walletId } = c.req.valid("param");
+  const { from, to, page, limit } = c.req.valid("query");
   const payload = c.get("jwtPayload") as { id: string; email: string };
   const userId = BigInt(payload.id);
 
   try {
-    // ดึงรายการธุรกรรมผ่าน Service
-    const transactions = await TransactionService.getTransactions(
+    // ดึงรายการธุรกรรมผ่าน Service พร้อม filter วันที่และ pagination
+    const result = await TransactionService.getTransactions(
       BigInt(walletId),
       userId,
+      { from, to, page, limit },
     );
 
     // แปลง BigInt, Decimal และ Date ให้เป็น String เพื่อความปลอดภัยใน JSON Response
-    const result = transactions.map((t) => ({
+    const transactions = result.transactions.map((t) => ({
       id: t.id.toString(),
       wallet_id: t.walletId.toString(),
       transaction_type: t.transactionType,
@@ -156,9 +157,8 @@ transactionController.openapi(getTransactionsRoute, async (c) => {
       created_at: t.createdAt.toISOString(),
     }));
 
-    return c.json(result, 200);
+    return c.json({ data: transactions, pagination: result.pagination }, 200);
   } catch (error: any) {
-    // จัดการ Error กรณีไม่พบ Wallet
     if (error.message === "WALLET_NOT_FOUND") {
       return c.json({ message: "Wallet not found" }, 404);
     }

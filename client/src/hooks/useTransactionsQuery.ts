@@ -9,13 +9,25 @@ import {
   type UpdateTransactionPayload,
   type CreateTransactionPayload,
 } from "../services/transaction.services";
-
+import type { GetTransactionsParams } from "../services/transaction.services";
 export const useTransactionsQuery = (walletIds: string[]) => {
   return useQueries({
     queries: walletIds.map((walletId) => ({
       queryKey: ["transactions", walletId],
       queryFn: () => transactionService.getTransactions(walletId),
     })),
+  });
+};
+
+// ดึง Transaction ของ wallet เดียว พร้อม filter วันที่และ pagination (ใช้ที่หน้า Wallet Detail)
+export const useWalletTransactionsQuery = (
+  walletId: string,
+  params?: GetTransactionsParams,
+) => {
+  return useQuery({
+    queryKey: ["transactions", walletId, params],
+    queryFn: () => transactionService.getTransactions(walletId, params),
+    enabled: !!walletId,
   });
 };
 

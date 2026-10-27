@@ -19,14 +19,49 @@ export class TransactionRepository {
     });
   }
 
+  // สร้างเงื่อนไขกรองช่วงวันที่ ใช้ร่วมกันทั้ง findMany และ count กันเขียนซ้ำ
+  private static buildDateRangeWhere(fromDate?: Date, toDateExclusive?: Date) {
+    if (!fromDate && !toDateExclusive) return {};
+    return {
+      transactionDate: {
+        ...(fromDate && { gte: fromDate }),
+        ...(toDateExclusive && { lt: toDateExclusive }),
+      },
+    };
+  }
+
   // ดึงรายการ Transaction ทั้งหมดใน Wallet
-  static async findManyByWalletId(walletId: bigint, db: DbClient = prisma) {
+  static async findManyByWalletId(
+    walletId: bigint,
+    options: {
+      fromDate?: Date;
+      toDateExclusive?: Date;
+      skip?: number;
+      take?: number;
+    } = {},
+    db: DbClient = prisma,
+  ) {
     return await db.transaction.findMany({
       where: {
         walletId,
+        ...this.buildDateRangeWhere(options.fromDate, options.toDateExclusive),
       },
-      orderBy: {
-        transactionDate: "desc",
+      orderBy: { transactionDate: "desc" },
+      skip: options.skip,
+      take: options.take,
+    });
+  }
+
+  // นับจำนวน Transaction ใน Wallet ตามช่วงวันที่ (optional) สำหรับ pagination
+  static async countByWalletId(
+    walletId: bigint,
+    options: { fromDate?: Date; toDateExclusive?: Date } = {},
+    db: DbClient = prisma,
+  ) {
+    return await db.transaction.count({
+      where: {
+        walletId,
+        ...this.buildDateRangeWhere(options.fromDate, options.toDateExclusive),
       },
     });
   }

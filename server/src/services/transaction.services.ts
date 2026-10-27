@@ -4,7 +4,24 @@ import { TransactionType } from "@prisma/client";
 
 export class TransactionService {
   // 1. Service: getTransactions
-  static async getTransactions(walletId: bigint, userId: bigint) {
+  static async getTransactions(
+    walletId: bigint,
+    userId: bigint,
+    filters: { from?: string; to?: string; page: number; limit: number },
+  ) {
+    // แปลง YYYY-MM-DD เป็นช่วง UTC แบบ [from 00:00, to+1วัน 00:00) กัน edge case เรื่องเศษวินาทีฝั่ง to
+    const fromDate = filters.from
+      ? new Date(`${filters.from}T00:00:00.000Z`)
+      : undefined;
+    const toDateExclusive = filters.to
+      ? new Date(
+          new Date(`${filters.to}T00:00:00.000Z`).getTime() +
+            24 * 60 * 60 * 1000,
+        )
+      : undefined;
+
+    const skip = (filters.page - 1) * filters.limit;
+
     return await prisma.$transaction(async (tx) => {
       // ตรวจสอบสิทธิ์การเป็นเจ้าของ Wallet
       const wallet = await TransactionRepository.findWalletByIdAndUserId(
@@ -14,8 +31,29 @@ export class TransactionService {
       );
       if (!wallet) throw new Error("WALLET_NOT_FOUND");
 
-      // ดึงรายการธุรกรรมทั้งหมดจาก Repository
-      return await TransactionRepository.findManyByWalletId(walletId, tx);
+      // ดึงรายการและนับจำนวนทั้งหมดพร้อมกัน (ไม่ต้องรอทีละตัว)
+      const [transactions, total] = await Promise.all([
+        TransactionRepository.findManyByWalletId(
+          walletId,
+          { fromDate, toDateExclusive, skip, take: filters.limit },
+          tx,
+        ),
+        TransactionRepository.countByWalletId(
+          walletId,
+          { fromDate, toDateExclusive },
+          tx,
+        ),
+      ]);
+
+      return {
+        transactions,
+        pagination: {
+          page: filters.page,
+          limit: filters.limit,
+          total,
+          totalPages: Math.ceil(total / filters.limit),
+        },
+      };
     });
   }
 

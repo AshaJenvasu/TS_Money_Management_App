@@ -39,11 +39,23 @@ export interface CreateTransactionPayload {
   transaction_date: string;
 }
 
+// กำหนดพารามิเตอร์ filter วันที่และ pagination ที่ backend รองรับ
+export interface GetTransactionsParams {
+  from?: string;
+  to?: string;
+  page?: number;
+  limit?: number;
+}
+
 export const transactionService = {
-  // ดึง Transactions ตาม Wallet ID (Wallet Detail)
-  getTransactions: async (walletId: string): Promise<Transaction[]> => {
-    const response = await api.get<Transaction[]>(
+  // ดึง Transactions ตาม Wallet ID พร้อม filter วันที่และ pagination (Wallet Detail)
+  getTransactions: async (
+    walletId: string,
+    params?: GetTransactionsParams,
+  ): Promise<PaginatedTransactionsResponse> => {
+    const response = await api.get<PaginatedTransactionsResponse>(
       `/wallets/${walletId}/transactions`,
+      { params },
     );
 
     return response.data;
