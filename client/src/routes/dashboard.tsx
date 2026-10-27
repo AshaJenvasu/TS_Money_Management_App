@@ -6,6 +6,11 @@ import { useWalletsQuery } from "../hooks/useWalletsQuery";
 import { useAllTransactionsQuery } from "../hooks/useTransactionsQuery";
 import { WalletCard } from "../components/wallets/WalletCard";
 import { PortfolioCard } from "../components/dashboard/PortfolioCard";
+import DateRangeFilterDropdown from "../components/ui/DateRangeFilterDropdown";
+import {
+  getDateRangeForPreset,
+  type DateRange,
+} from "../utils/dateRangePresets";
 import { useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { walletService } from "../services/wallet.services";
@@ -61,6 +66,17 @@ function DashboardPage() {
 
   // เก็บหน้าปัจจุบันของ Pagination
   const [transactionPage, setTransactionPage] = useState(1);
+
+  // เก็บช่วงวันที่ที่ใช้กรอง เฉพาะใน modal "ดูทั้งหมด" เท่านั้น ไม่กระทบ "รายการล่าสุด" หน้าแรก
+  const [transactionDateRange, setTransactionDateRange] = useState<DateRange>(
+    () => getDateRangeForPreset("thisMonth"),
+  );
+
+  // รับค่าช่วงวันที่ใหม่จาก DateRangeFilterDropdown แล้วรีเซ็ตหน้ากลับไปหน้า 1 เสมอ
+  const handleTransactionDateRangeChange = (range: DateRange) => {
+    setTransactionDateRange(range);
+    setTransactionPage(1);
+  };
 
   // สร้าง Wallet
   const createMutation = useMutation({
@@ -154,7 +170,12 @@ function DashboardPage() {
     data: allTransactionsResponse,
     isPending: isTransactionsPending,
     isError: isTransactionsError,
-  } = useAllTransactionsQuery(transactionPage, 5);
+  } = useAllTransactionsQuery(
+    transactionPage,
+    5,
+    transactionDateRange.from,
+    transactionDateRange.to,
+  );
 
   if (isPending) {
     return <DashboardSkeleton />;
@@ -540,6 +561,12 @@ function DashboardPage() {
                   >
                     ✕
                   </button>
+                </div>
+                {/* ตัวกรองช่วงวันที่ เฉพาะ modal นี้เท่านั้น ไม่กระทบ "รายการล่าสุด" */}
+                <div className="mb-4 flex justify-end">
+                  <DateRangeFilterDropdown
+                    onChange={handleTransactionDateRangeChange}
+                  />
                 </div>
                 {/* Transaction List */}
                 <div className="flex max-h-[55vh] flex-col gap-3 overflow-y-auto">

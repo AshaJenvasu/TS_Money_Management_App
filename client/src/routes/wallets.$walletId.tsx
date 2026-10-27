@@ -3,8 +3,6 @@ import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
-  Calendar,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -17,6 +15,7 @@ import TransactionCard from "../components/transactions/TransactionCard";
 import TransactionCreateDialog from "../components/transactions/TransactionCreateDialog";
 import TransactionEditDialog from "../components/transactions/TransactionEditDialog";
 import TransactionDeleteDialog from "../components/transactions/TransactionDeleteDialog";
+import DateRangeFilterDropdown from "../components/ui/DateRangeFilterDropdown";
 import WalletDetailScene from "../components/wallet-detail/WalletDetailScene";
 import SakuraPetals from "../components/wallet-detail/SakuraPetals";
 import PeekingCat from "../components/wallet-detail/PeekingCat";
@@ -25,9 +24,7 @@ import type { Transaction } from "../services/transaction.services";
 import { formatCurrency } from "../utils/formatCurrency";
 import {
   getDateRangeForPreset,
-  DATE_RANGE_PRESET_LABELS,
   type DateRange,
-  type DateRangePresetKey,
 } from "../utils/dateRangePresets";
 
 const PAGE_SIZE = 10;
@@ -67,14 +64,6 @@ function groupTransactionsByDate(
   return groups;
 }
 
-// ลำดับปุ่ม preset ที่จะโชว์ใน dropdown
-const PRESET_ORDER: DateRangePresetKey[] = [
-  "thisMonth",
-  "lastMonth",
-  "thisYear",
-  "lastYear",
-];
-
 function WalletDetailPage() {
   // ชื่อ param ยังคือ walletId ตามชื่อไฟล์ route แต่ค่าจริงคือ publicId
   const { walletId: publicId } = Route.useParams();
@@ -88,36 +77,14 @@ function WalletDetailPage() {
   const [deletingTransaction, setDeletingTransaction] =
     useState<Transaction | null>(null);
 
-  const [activeFilter, setActiveFilter] = useState<
-    DateRangePresetKey | "custom"
-  >("thisMonth");
   const [dateRange, setDateRange] = useState<DateRange>(() =>
     getDateRangeForPreset("thisMonth"),
   );
-  const [customFrom, setCustomFrom] = useState(dateRange.from);
-  const [customTo, setCustomTo] = useState(dateRange.to);
 
-  // ปิด dropdown ด้วยการ blur element ที่ focus อยู่ (DaisyUI dropdown เปิด/ปิดตาม focus-within)
-  const closeDateFilterDropdown = () => {
-    (document.activeElement as HTMLElement | null)?.blur();
-  };
-
-  const handleSelectPreset = (preset: DateRangePresetKey) => {
-    setDateRange(getDateRangeForPreset(preset));
-    setActiveFilter(preset);
-    setPage(1); // เปลี่ยนตัวกรองแล้วต้องกลับไปหน้า 1 เสมอ กันเลขหน้าเก่าเกินจำนวนหน้าใหม่
-    closeDateFilterDropdown();
-  };
-
-  const isCustomRangeInvalid =
-    !customFrom || !customTo || customFrom > customTo;
-
-  const handleApplyCustomRange = () => {
-    if (isCustomRangeInvalid) return;
-    setDateRange({ from: customFrom, to: customTo });
-    setActiveFilter("custom");
+  // รับค่าช่วงวันที่ใหม่จาก DateRangeFilterDropdown แล้วรีเซ็ตหน้ากลับไปหน้า 1 เสมอ
+  const handleDateRangeChange = (range: DateRange) => {
+    setDateRange(range);
     setPage(1);
-    closeDateFilterDropdown();
   };
 
   const walletQuery = useWalletQuery(publicId);
@@ -134,12 +101,6 @@ function WalletDetailPage() {
   const transactions = transactionsQuery.data?.data ?? [];
   const pagination = transactionsQuery.data?.pagination;
   const groupedTransactions = groupTransactionsByDate(transactions);
-
-  // ข้อความที่โชว์บนปุ่ม dropdown ตัวกรองวันที่
-  const filterButtonLabel =
-    activeFilter === "custom"
-      ? `${dateRange.from} ถึง ${dateRange.to}`
-      : DATE_RANGE_PRESET_LABELS[activeFilter];
 
   if (walletQuery.isLoading) {
     return (
@@ -220,71 +181,7 @@ function WalletDetailPage() {
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-lg font-bold text-[#39365F]">รายการธุรกรรม</h2>
 
-          {/* Dropdown ตัวกรองช่วงวันที่: preset 4 ปุ่ม + กำหนดช่วงเอง */}
-          <div className="dropdown dropdown-end">
-            <div
-              tabIndex={0}
-              role="button"
-              className="flex items-center gap-1 rounded-full border border-[#7566C7]/30 bg-white px-3 py-2 text-xs font-semibold text-[#7566C7] shadow-sm"
-            >
-              <Calendar size={14} />
-              {filterButtonLabel}
-              <ChevronDown size={14} />
-            </div>
-            <div
-              tabIndex={0}
-              className="dropdown-content z-10 mt-2 w-72 rounded-2xl bg-white p-3 shadow-xl"
-            >
-              <ul className="menu menu-sm gap-1 p-0">
-                {PRESET_ORDER.map((preset) => (
-                  <li key={preset}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectPreset(preset)}
-                      className={
-                        activeFilter === preset
-                          ? "active bg-[#7566C7]/10 text-[#7566C7]"
-                          : ""
-                      }
-                    >
-                      {DATE_RANGE_PRESET_LABELS[preset]}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="divider my-2" />
-
-              <p className="mb-2 text-xs font-semibold text-[#8986A8]">
-                กำหนดช่วงเอง
-              </p>
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={customFrom}
-                  max={customTo || undefined}
-                  onChange={(e) => setCustomFrom(e.target.value)}
-                  className="input input-sm input-bordered w-full border-[#D8D5F0] bg-white text-[#1F2A5C] [color-scheme:light]"
-                />
-                <span className="text-[#8986A8]">-</span>
-                <input
-                  type="date"
-                  value={customTo}
-                  min={customFrom || undefined}
-                  onChange={(e) => setCustomTo(e.target.value)}
-                  className="input input-sm input-bordered w-full border-[#D8D5F0] bg-white text-[#1F2A5C] [color-scheme:light]"
-                />
-              </div>
-              <button
-                type="button"
-                disabled={isCustomRangeInvalid}
-                onClick={handleApplyCustomRange}
-                className="btn btn-sm btn-block mt-2 border-none bg-[#7566C7] text-white disabled:opacity-40"
-              >
-                ใช้ช่วงนี้
-              </button>
-            </div>
-          </div>
+          <DateRangeFilterDropdown onChange={handleDateRangeChange} />
         </div>
 
         {transactionsQuery.isLoading ? (

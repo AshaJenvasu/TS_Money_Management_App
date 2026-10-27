@@ -7,7 +7,6 @@ import {
   TransactionIdParamSchema,
   CreateTransactionBodySchema,
   UpdateTransactionBodySchema,
-  TransactionPaginationQuerySchema,
   TransactionDateFilterQuerySchema,
 } from "../schema/transaction.schema.js";
 
@@ -111,14 +110,14 @@ export const getAllTransactionsRoute = createRoute({
   tags: ["Transaction"],
   security: [{ Bearer: [] }],
   request: {
-    query: TransactionPaginationQuerySchema,
+    query: TransactionDateFilterQuerySchema,
   },
   responses: {
     200: {
       description: "Retrieve transactions with pagination successfully",
     },
     400: {
-      description: "Invalid pagination parameters",
+      description: "Invalid query parameters (e.g. from is after to)",
     },
     401: {
       description: "Unauthorized - Missing or invalid token",
@@ -292,20 +291,21 @@ transactionController.openapi(deleteTransactionRoute, async (c) => {
 
 // 5. GET /transactions
 transactionController.openapi(getAllTransactionsRoute, async (c) => {
-  // รับ Query Parameters และ User ID จาก JWT
-  const { page, limit } = c.req.valid("query");
+  // รับ Query Parameters (filter+pagination) และ User ID จาก JWT
+  const { from, to, page, limit } = c.req.valid("query");
   const payload = c.get("jwtPayload") as {
     id: string;
     email: string;
   };
   const userId = BigInt(payload.id);
 
-  // ดึง Transaction ของ User ทุก Wallet พร้อม Pagination
-  const result = await TransactionService.getTransactionsByUserId(
-    userId,
+  // ดึง Transaction ของ User ทุก Wallet พร้อม filter วันที่และ pagination
+  const result = await TransactionService.getTransactionsByUserId(userId, {
+    from,
+    to,
     page,
     limit,
-  );
+  });
 
   // แปลงข้อมูลให้ส่งผ่าน JSON ได้
   const transactions = result.transactions.map((t) => ({

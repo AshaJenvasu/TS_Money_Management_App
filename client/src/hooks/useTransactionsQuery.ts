@@ -35,10 +35,12 @@ export const useWalletTransactionsQuery = (
 export const useAllTransactionsQuery = (
   page: number = 1,
   limit: number = 5,
+  from?: string,
+  to?: string,
 ) => {
   return useQuery({
-    queryKey: ["transactions", "all", page, limit],
-    queryFn: () => transactionService.getAllTransactions(page, limit),
+    queryKey: ["transactions", "all", page, limit, from, to],
+    queryFn: () => transactionService.getAllTransactions(page, limit, from, to),
   });
 };
 

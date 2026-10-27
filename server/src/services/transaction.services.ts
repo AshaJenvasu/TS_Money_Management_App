@@ -152,24 +152,41 @@ export class TransactionService {
   // ดึง Transaction ทุก Wallet ของ User พร้อม Pagination
   static async getTransactionsByUserId(
     userId: bigint,
-    page: number,
-    limit: number,
+    filters: { from?: string; to?: string; page: number; limit: number },
   ) {
-    const skip = (page - 1) * limit;
+    // แปลง YYYY-MM-DD เป็นช่วง UTC แบบ [from 00:00, to+1วัน 00:00) เหมือน getTransactions ด้านบน
+    const fromDate = filters.from
+      ? new Date(`${filters.from}T00:00:00.000Z`)
+      : undefined;
+    const toDateExclusive = filters.to
+      ? new Date(
+          new Date(`${filters.to}T00:00:00.000Z`).getTime() +
+            24 * 60 * 60 * 1000,
+        )
+      : undefined;
+    const skip = (filters.page - 1) * filters.limit;
 
     // ดึงข้อมูลและนับจำนวนทั้งหมดพร้อมกันคำสั่งดึงรายการ (findMany) กับนับจำนวนรวม (count) เป็นสองคิวรีที่ ไม่ต้องรอกัน ถ้าเขียนแบบ await ทีละตัว มันจะรอตัวแรกเสร็จก่อนค่อยเริ่มตัวที่สอง แต่ Promise.all สั่งให้ทำ พร้อมกัน แล้วรอจนเสร็จทั้งคู่ เวลาที่ใช้เลยเท่ากับตัวที่ช้าที่สุด ไม่ใช่เอามาบวกกัน เร็วขึ้นเกือบเท่าตัวเลย
     const [transactions, total] = await Promise.all([
-      TransactionRepository.findManyByUserId(userId, skip, limit),
-      TransactionRepository.countByUserId(userId),
+      TransactionRepository.findManyByUserId(userId, {
+        fromDate,
+        toDateExclusive,
+        skip,
+        take: filters.limit,
+      }),
+      TransactionRepository.countByUserId(userId, {
+        fromDate,
+        toDateExclusive,
+      }),
     ]);
 
     return {
       transactions,
       pagination: {
-        page,
-        limit,
+        page: filters.page,
+        limit: filters.limit,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / filters.limit),
         //คือจำนวนหน้าทั้งหมด ใช้ ceil (ปัดขึ้น) เพราะเศษก็ยังต้องใช้อีกหน้าหนึ่ง เช่น มี 25 รายการ หน้าละ 10 25 / 10 = 2.5 → ปัดขึ้นเป็น 3 หน้า (หน้าสุดท้ายมี 5 รายการ)
       },
     };

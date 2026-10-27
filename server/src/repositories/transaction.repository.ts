@@ -113,11 +113,15 @@ export class TransactionRepository {
     });
   }
 
-  // ดึง Transaction ล่าสุดจากทุก Wallet ของ User พร้อม Pagination
+  // ดึง Transaction ล่าสุดจากทุก Wallet ของ User พร้อม Pagination และกรองช่วงวันที่ได้
   static async findManyByUserId(
     userId: bigint,
-    skip: number,
-    take: number,
+    options: {
+      fromDate?: Date;
+      toDateExclusive?: Date;
+      skip?: number;
+      take?: number;
+    } = {},
     db: DbClient = prisma,
   ) {
     return await db.transaction.findMany({
@@ -125,20 +129,25 @@ export class TransactionRepository {
         wallet: {
           userId,
         },
+        ...this.buildDateRangeWhere(options.fromDate, options.toDateExclusive),
       },
       orderBy: [{ transactionDate: "desc" }, { id: "desc" }],
-      skip,
-      take,
+      skip: options.skip,
+      take: options.take,
     });
   }
-
-  // นับจำนวน Transaction ทั้งหมดของ User จากทุก Wallet
-  static async countByUserId(userId: bigint, db: DbClient = prisma) {
+  // นับจำนวน Transaction ทั้งหมดของ User จากทุก Wallet ตามช่วงวันที่ (optional)
+  static async countByUserId(
+    userId: bigint,
+    options: { fromDate?: Date; toDateExclusive?: Date } = {},
+    db: DbClient = prisma,
+  ) {
     return await db.transaction.count({
       where: {
         wallet: {
           userId,
         },
+        ...this.buildDateRangeWhere(options.fromDate, options.toDateExclusive),
       },
     });
   }

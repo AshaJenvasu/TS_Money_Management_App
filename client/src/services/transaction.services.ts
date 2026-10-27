@@ -65,11 +65,13 @@ export const transactionService = {
   getAllTransactions: async (
     page: number = 1,
     limit: number = 5,
+    from?: string,
+    to?: string,
   ): Promise<PaginatedTransactionsResponse> => {
     const response = await api.get<PaginatedTransactionsResponse>(
       "/transactions",
       {
-        params: { page, limit },
+        params: { page, limit, from, to },
       },
     );
 
