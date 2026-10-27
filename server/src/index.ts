@@ -42,20 +42,22 @@ app.get("/", (c) => {
 });
 
 // Scalar API Reference
-app.route(
-  "/scalar",
-  Scalar.serve({
-    document: () =>
-      app.getOpenAPI31Document({
-        openapi: "3.1.0",
-        info: {
-          title: "My API Documentation",
-          version: "1.0.0",
-          description: "API Documentation powered by Hono OpenAPI & Scalar",
-        },
-      }),
-  }),
-);
+if (process.env.NODE_ENV !== "production") {
+  app.route(
+    "/scalar",
+    Scalar.serve({
+      document: () =>
+        app.getOpenAPI31Document({
+          openapi: "3.1.0",
+          info: {
+            title: "My API Documentation",
+            version: "1.0.0",
+            description: "API Documentation powered by Hono OpenAPI & Scalar",
+          },
+        }),
+    }),
+  );
+}
 
 // Controllers ทั้งหมดของ App หลัก
 const api = new OpenAPIHono();
