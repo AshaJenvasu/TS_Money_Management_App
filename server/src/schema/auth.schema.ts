@@ -46,5 +46,6 @@ export const LoginResponseSchema = z.object({
 
 export const userProfileResponseSchema = z.object({
   id: z.string(),
+  username: z.string(),
   email: z.string().email(),
 });
