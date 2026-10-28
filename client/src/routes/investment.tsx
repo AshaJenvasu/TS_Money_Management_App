@@ -22,6 +22,11 @@ import { TransactionDeleteDialog } from "../components/investment/TransactionDel
 import WalletDetailScene from "../components/wallet-detail/WalletDetailScene";
 import SakuraPetals from "../components/wallet-detail/SakuraPetals";
 import PeekingCat from "../components/wallet-detail/PeekingCat";
+import DateRangeFilterDropdown from "../components/ui/DateRangeFilterDropdown";
+import {
+  getDateRangeForPreset,
+  type DateRange,
+} from "../utils/dateRangePresets";
 import type { AssetView } from "../types/investment";
 import type { PortfolioTransactionListItem } from "../services/portfolio.services";
 
@@ -34,6 +39,9 @@ function InvestmentPage() {
   );
   const [filterAssetId, setFilterAssetId] = useState<string | null>(null);
   const [historyShown, setHistoryShown] = useState(5);
+  const [dateRange, setDateRange] = useState<DateRange>(() =>
+    getDateRangeForPreset("thisMonth"),
+  );
   const [isCreateAssetOpen, setIsCreateAssetOpen] = useState(false);
   const [editingAssetView, setEditingAssetView] = useState<AssetView | null>(
     null,
@@ -121,8 +129,13 @@ function InvestmentPage() {
     () =>
       [...transactions]
         .filter((t) => filterAssetId == null || t.assetId === filterAssetId)
+        .filter((t) => {
+          // เทียบเฉพาะส่วนวันที่ YYYY-MM-DD กับช่วงที่เลือกไว้ รวมทั้งสองฝั่ง
+          const txDate = t.transactionDate.slice(0, 10);
+          return txDate >= dateRange.from && txDate <= dateRange.to;
+        })
         .sort((a, b) => b.transactionDate.localeCompare(a.transactionDate)),
-    [transactions, filterAssetId],
+    [transactions, filterAssetId, dateRange],
   );
 
   const toggleExpanded = (assetId: string) => {
@@ -135,6 +148,12 @@ function InvestmentPage() {
       }
       return next;
     });
+  };
+
+  // รับค่าช่วงวันที่ใหม่จาก DateRangeFilterDropdown แล้วรีเซ็ต "ดูเพิ่มเติม" กลับไปที่ 5 รายการแรกเสมอ
+  const handleDateRangeChange = (range: DateRange) => {
+    setDateRange(range);
+    setHistoryShown(5);
   };
 
   const showHistoryOfAsset = (assetId: string) => {
@@ -230,6 +249,10 @@ function InvestmentPage() {
         >
           <Plus size={20} /> เพิ่มรายการซื้อขาย
         </button>
+
+        <div className="mb-3 flex justify-end">
+          <DateRangeFilterDropdown onChange={handleDateRangeChange} />
+        </div>
 
         <TransactionHistorySection
           transactions={sortedTransactions}

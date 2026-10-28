@@ -293,7 +293,7 @@ function RootLayout() {
         </header>
 
         {/* ส่วนแสดงผลเนื้อหาของแต่ละหน้า */}
-        <main className="w-full">
+        <main className="w-full pb-20">
           <Outlet />
         </main>
       </div>
