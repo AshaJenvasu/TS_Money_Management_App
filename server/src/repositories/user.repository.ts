@@ -78,4 +78,23 @@ export class UserRepository {
       data: { email },
     });
   }
+
+  // อัปเดต Password Hash ของ User
+  static async updatePasswordHash(
+    id: bigint,
+    passwordHash: string,
+    db: DbClient = prisma,
+  ) {
+    return await db.user.update({
+      where: { id },
+      data: { passwordHash },
+    });
+  }
+
+  // ลบ User ออกจาก Database — Cascade ที่ตั้งไว้ใน schema จะลบ wallet/transaction/portfolio/asset ที่พ่วงกันให้อัตโนมัติ
+  static async deleteUser(id: bigint, db: DbClient = prisma) {
+    return await db.user.delete({
+      where: { id },
+    });
+  }
 }

@@ -57,4 +57,52 @@ export class UserService {
       throw error;
     }
   }
+
+  // อัปเดต Password ของ User พร้อมเช็ค current password ก่อนตั้งรหัสใหม่
+  static async updatePassword(
+    userId: bigint,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    // ดึงข้อมูล User ปัจจุบันมาใช้เช็ค password hash
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new Error("USER_NOT_FOUND");
+    }
+
+    // ยืนยันตัวตนด้วย current password ก่อนอนุญาตให้ตั้งรหัสผ่านใหม่
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash,
+    );
+    if (!isPasswordValid) {
+      throw new Error("INVALID_PASSWORD");
+    }
+
+    // Hash รหัสผ่านใหม่ด้วย rounds เดียวกับตอน register (10)
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    return await UserRepository.updatePasswordHash(userId, newPasswordHash);
+  }
+
+  // ลบบัญชีของ User พร้อมเช็ค current password ก่อนลบจริง
+  static async deleteAccount(userId: bigint, currentPassword: string) {
+    // ดึงข้อมูล User ปัจจุบันมาใช้เช็ค password hash
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new Error("USER_NOT_FOUND");
+    }
+
+    // ยืนยันตัวตนด้วย current password ก่อนอนุญาตให้ลบบัญชี — ขั้นตอนนี้สำคัญที่สุดเพราะย้อนกลับไม่ได้
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash,
+    );
+    if (!isPasswordValid) {
+      throw new Error("INVALID_PASSWORD");
+    }
+
+    // ลบจริง — Cascade ที่ schema จัดการลบข้อมูลที่พ่วงกันทั้งหมดให้เอง
+    await UserRepository.deleteUser(userId);
+  }
 }

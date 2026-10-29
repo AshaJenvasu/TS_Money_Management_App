@@ -1,16 +1,18 @@
-import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import {
   UserParamsSchema,
   UserResponseSchema,
   UpdateUsernameBodySchema,
   UpdateEmailBodySchema,
+  UpdatePasswordBodySchema,
+  DeleteAccountBodySchema,
 } from "../schema/user.schema.js";
 import { userProfileResponseSchema } from "../schema/auth.schema.js";
 import { UserRepository } from "../repositories/user.repository.js";
 import { UserService } from "../services/user.services.js";
 import { sign } from "hono/jwt";
-import { setCookie } from "hono/cookie";
+import { setCookie, deleteCookie } from "hono/cookie";
 
 export const userController = new OpenAPIHono();
 
@@ -139,6 +141,75 @@ export const updateEmailRoute = createRoute({
   },
 });
 
+// Define OpenAPI Route สำหรับ PUT /users/me/password
+export const updatePasswordRoute = createRoute({
+  method: "put",
+  path: "/users/me/password",
+  tags: ["User"],
+  security: [{ Bearer: [] }],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: UpdatePasswordBodySchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.object({ message: z.string() }),
+        },
+      },
+      description: "Update password successfully",
+    },
+    400: {
+      description: "Invalid password format",
+    },
+    401: {
+      description: "Unauthorized or current password incorrect",
+    },
+    404: {
+      description: "User not found",
+    },
+  },
+});
+
+// Define OpenAPI Route สำหรับ DELETE /users/me
+export const deleteAccountRoute = createRoute({
+  method: "delete",
+  path: "/users/me",
+  tags: ["User"],
+  security: [{ Bearer: [] }],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: DeleteAccountBodySchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.object({ message: z.string() }),
+        },
+      },
+      description: "Delete account successfully",
+    },
+    401: {
+      description: "Unauthorized or current password incorrect",
+    },
+    404: {
+      description: "User not found",
+    },
+  },
+});
+
 userController.use("/users/me", authMiddleware);
 userController.use("/users/me/*", authMiddleware);
 
@@ -249,6 +320,53 @@ userController.openapi(updateEmailRoute, async (c) => {
     }
     if (error.message === "EMAIL_TAKEN") {
       return c.json({ message: "Email already taken" }, 409);
+    }
+    throw error;
+  }
+});
+
+// 4. Controller: updatePassword
+userController.openapi(updatePasswordRoute, async (c) => {
+  const payload = c.get("jwtPayload") as { id: string; email: string };
+  const { currentPassword, newPassword } = c.req.valid("json");
+
+  try {
+    // อัปเดต Password ผ่าน Service (เช็ค current password + hash ใหม่ + เขียนลง DB ให้แล้ว)
+    await UserService.updatePassword(
+      BigInt(payload.id),
+      currentPassword,
+      newPassword,
+    );
+
+    return c.json({ message: "Password updated successfully" }, 200);
+  } catch (error: any) {
+    if (error.message === "USER_NOT_FOUND") {
+      return c.json({ message: "User not found" }, 404);
+    }
+    if (error.message === "INVALID_PASSWORD") {
+      return c.json({ message: "Current password is incorrect" }, 401);
+    }
+    throw error;
+  }
+});
+
+// 5. Controller: deleteAccount
+userController.openapi(deleteAccountRoute, async (c) => {
+  const payload = c.get("jwtPayload") as { id: string; email: string };
+  const { currentPassword } = c.req.valid("json");
+
+  try {
+    await UserService.deleteAccount(BigInt(payload.id), currentPassword);
+
+    deleteCookie(c, "auth_token", { path: "/" });
+
+    return c.json({ message: "Account deleted successfully" }, 200);
+  } catch (error: any) {
+    if (error.message === "USER_NOT_FOUND") {
+      return c.json({ message: "User not found" }, 404);
+    }
+    if (error.message === "INVALID_PASSWORD") {
+      return c.json({ message: "Current password is incorrect" }, 401);
     }
     throw error;
   }

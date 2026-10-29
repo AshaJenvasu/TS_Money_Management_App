@@ -130,7 +130,10 @@ function RootLayout() {
                   </Link>
                 </nav>
 
-                <div className="flex items-center gap-2 rounded-full border border-[#BFD3F3]/25 bg-[#1E2A66]/60 px-3.5 py-1.5 text-xs font-['Mali']">
+                <Link
+                  to="/settings"
+                  className="flex items-center gap-2 rounded-full border border-[#BFD3F3]/25 bg-[#1E2A66]/60 px-3.5 py-1.5 text-xs font-['Mali'] no-underline transition hover:bg-[#5568E0]/30"
+                >
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5568E0] text-white">
                     <svg
                       className="h-3.5 w-3.5 fill-current"
@@ -145,7 +148,7 @@ function RootLayout() {
                       (user as { email?: string })?.email ||
                       "ผู้ใช้งาน"}
                   </span>
-                </div>
+                </Link>
 
                 <button
                   onClick={handleLogout}
@@ -258,6 +261,21 @@ function RootLayout() {
                     }}
                   >
                     Investment
+                  </Link>
+
+                  <Link
+                    to="/settings"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="rounded-xl border border-[#5568E0]/50 px-4 py-3 text-left text-sm font-semibold text-[#BFD3F3] no-underline transition hover:bg-[#5568E0]/20"
+                    activeProps={{
+                      className: "bg-[#5568E0] text-white",
+                    }}
+                    inactiveProps={{
+                      className:
+                        "border border-[#5568E0]/50 text-[#BFD3F3] hover:bg-[#5568E0]/20",
+                    }}
+                  >
+                    Settings
                   </Link>
 
                   <button
