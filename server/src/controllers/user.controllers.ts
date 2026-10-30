@@ -250,6 +250,7 @@ userController.openapi(updateUsernameRoute, async (c) => {
       {
         id: updatedUser.id.toString(),
         username: updatedUser.username,
+        iat: Math.floor(Date.now() / 1000),
         email: updatedUser.email,
       },
       200,

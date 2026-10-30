@@ -1,7 +1,5 @@
-import { prisma } from "../config/prisma.js";
-import { Prisma, PrismaClient } from "@prisma/client";
-// Type Helper รองรับทั้ง Prisma Client ปกติและ Transaction Client
-export type DbClient = PrismaClient | Prisma.TransactionClient;
+import { prisma, type DbClient } from "../config/prisma.js";
+import { Prisma } from "@prisma/client";
 
 export class UserRepository {
   // ค้นหา User จาก Email หรือ Username
@@ -87,7 +85,11 @@ export class UserRepository {
   ) {
     return await db.user.update({
       where: { id },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        // เปลี่ยน password ครั้งนี้ ไม่ว่าจะมาจากทางไหน (เปลี่ยนปกติ หรือ reset ด้วย token) ก็ถือว่า session เก่าต้องถูก invalidate เสมอ
+        passwordChangedAt: new Date(),
+      },
     });
   }
 
@@ -95,6 +97,14 @@ export class UserRepository {
   static async deleteUser(id: bigint, db: DbClient = prisma) {
     return await db.user.delete({
       where: { id },
+    });
+  }
+
+  // ดึงแค่ passwordChangedAt ของ user (ไม่ดึง passwordHash ทั้งก้อน) ใช้เฉพาะใน authMiddleware ที่ query ทุก request
+  static async findPasswordChangedAtById(id: bigint, db: DbClient = prisma) {
+    return await db.user.findUnique({
+      where: { id },
+      select: { passwordChangedAt: true },
     });
   }
 }

@@ -8,6 +8,10 @@ import {
   RegisterResponseSchema,
 } from "../schema/auth.schema.js";
 import { setCookie, deleteCookie } from "hono/cookie";
+import {
+  ForgotPasswordBodySchema,
+  ResetPasswordBodySchema,
+} from "../schema/auth.schema.js";
 import { z } from "zod";
 
 export const authController = new OpenAPIHono();
@@ -89,6 +93,64 @@ export const logoutRoute = createRoute({
   },
 });
 
+// OpenAPI Route Specification สำหรับขอ reset password link
+export const forgotPasswordRoute = createRoute({
+  method: "post",
+  path: "/auth/forgot-password",
+  tags: ["Auth"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: ForgotPasswordBodySchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.object({ message: z.string() }),
+        },
+      },
+      description: "Password reset email sent (if account exists)",
+    },
+    429: {
+      description: "Too many reset requests, please try again later",
+    },
+  },
+});
+
+// OpenAPI Route Specification สำหรับตั้ง password ใหม่ด้วย reset token
+export const resetPasswordRoute = createRoute({
+  method: "post",
+  path: "/auth/reset-password",
+  tags: ["Auth"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: ResetPasswordBodySchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.object({ message: z.string() }),
+        },
+      },
+      description: "Password reset successfully",
+    },
+    400: {
+      description: "Invalid, expired, or already-used token",
+    },
+  },
+});
+
 // 1. Controller: registerUser
 authController.openapi(registerRoute, async (c) => {
   const body = c.req.valid("json");
@@ -142,6 +204,59 @@ authController.openapi(logoutRoute, (c) => {
     {
       message: "Logout successful",
     },
+    200,
+  );
+});
+
+// 4. Controller: forgotPassword
+authController.openapi(forgotPasswordRoute, async (c) => {
+  const { email } = c.req.valid("json");
+
+  try {
+    await AuthService.forgotPassword(email);
+  } catch (error: any) {
+    if (error.message === "TOO_MANY_REQUESTS") {
+      return c.json(
+        { message: "ขอ reset password บ่อยเกินไป กรุณาลองใหม่ภายหลัง" },
+        429,
+      );
+    }
+    throw error;
+  }
+
+  // ตอบข้อความเดียวกันเสมอไม่ว่า email จะมีอยู่จริงในระบบหรือไม่ กัน user enumeration
+  return c.json(
+    {
+      message:
+        "ถ้า email นี้มีอยู่ในระบบ เราได้ส่งลิงก์รีเซ็ตรหัสผ่านไปให้แล้ว",
+    },
+    200,
+  );
+});
+
+// 5. Controller: resetPassword
+authController.openapi(resetPasswordRoute, async (c) => {
+  const { token, newPassword } = c.req.valid("json");
+
+  try {
+    await AuthService.resetPassword(token, newPassword);
+  } catch (error: any) {
+    if (
+      error.message === "INVALID_TOKEN" ||
+      error.message === "TOKEN_ALREADY_USED" ||
+      error.message === "TOKEN_EXPIRED"
+    ) {
+      return c.json(
+        { message: "ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้องหรือหมดอายุแล้ว" },
+        400,
+      );
+    }
+    throw error;
+  }
+
+  // ไม่ setCookie เลย ไม่ auto-login ตามที่ตกลงกันไว้ ให้ user กลับไป login เองด้วยรหัสผ่านใหม่
+  return c.json(
+    { message: "ตั้งรหัสผ่านใหม่สำเร็จ กรุณาเข้าสู่ระบบอีกครั้ง" },
     200,
   );
 });

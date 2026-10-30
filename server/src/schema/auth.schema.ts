@@ -49,3 +49,31 @@ export const userProfileResponseSchema = z.object({
   username: z.string(),
   email: z.string().email(),
 });
+
+// ==========================================
+// 4. Change Password Schemas & Route
+// ==========================================
+
+// กฎความแข็งแรงของ password แบบ reusable เพราะใช้ซ้ำทั้งที่นี่และ UpdatePasswordBodySchema ใน user.schema.ts
+export const strongPasswordSchema = z
+  .string()
+  .min(8, "รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร")
+  .regex(/[A-Z]/, "รหัสผ่านต้องมีตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว")
+  .regex(/[a-z]/, "รหัสผ่านต้องมีตัวพิมพ์เล็กอย่างน้อย 1 ตัว")
+  .regex(/[0-9]/, "รหัสผ่านต้องมีตัวเลขอย่างน้อย 1 ตัว")
+  .regex(/[^A-Za-z0-9]/, "รหัสผ่านต้องมีอักขระพิเศษอย่างน้อย 1 ตัว");
+
+// นิยาม Zod Schema สำหรับ Body ตอนขอ reset password link
+export const ForgotPasswordBodySchema = z.object({
+  email: z.string().email("รูปแบบ Email ไม่ถูกต้อง").openapi({
+    example: "user@example.com",
+  }),
+});
+
+// นิยาม Zod Schema สำหรับ Body ตอนตั้ง password ใหม่ด้วย reset token
+export const ResetPasswordBodySchema = z.object({
+  token: z.string().min(1, "Token ไม่ถูกต้อง").openapi({
+    example: "a1b2c3d4e5f6...",
+  }),
+  newPassword: strongPasswordSchema.openapi({ example: "NewPassword456!" }),
+});

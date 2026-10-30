@@ -1,8 +1,5 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { prisma } from "../config/prisma.js";
-
-// Type Helper สำหรับ Best Practice รองรับทั้ง Prisma Standard Client และ Transaction Client
-export type DbClient = PrismaClient | Prisma.TransactionClient;
+import { Prisma } from "@prisma/client";
+import { prisma, type DbClient } from "../config/prisma.js";
 
 export class TransactionRepository {
   //ตรวจสอบว่า Wallet นี้เป็นของ User คนนี้จริงหรือไม่
