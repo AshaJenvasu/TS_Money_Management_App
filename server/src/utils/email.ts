@@ -1,36 +1,64 @@
 import nodemailer from "nodemailer";
 
-// สร้าง Ethereal test account อัตโนมัติตอน server เริ่มทำงาน ไม่ต้องสมัครเองล่วงหน้า
-const testAccount = await nodemailer.createTestAccount();
+// เลือก transporter ตาม environment — production ใช้ Gmail จริง dev ใช้ Ethereal (fake SMTP)
+async function createTransporter() {
+  if (process.env.NODE_ENV === "production") {
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+      throw new Error(
+        "GMAIL_USER or GMAIL_APP_PASSWORD is missing in environment variables (.env)",
+      );
+    }
+
+    return nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    });
+  }
+
+  // dev: สร้าง Ethereal test account อัตโนมัติตอน server เริ่มทำงาน ไม่ต้องสมัครเองล่วงหน้า
+  const testAccount = await nodemailer.createTestAccount();
+  console.log(`📧 Ethereal test account ready: ${testAccount.user}`);
+
+  return nodemailer.createTransport({
+    host: testAccount.smtp.host,
+    port: testAccount.smtp.port,
+    secure: testAccount.smtp.secure,
+    auth: {
+      user: testAccount.user,
+      pass: testAccount.pass,
+    },
+  });
+}
 
 // Transporter ตัวเดียวใช้ร่วมกันทั้งแอป เหมือน pattern ของ prisma client ใน config/prisma.ts
-const transporter = nodemailer.createTransport({
-  host: testAccount.smtp.host,
-  port: testAccount.smtp.port,
-  secure: testAccount.smtp.secure,
-  auth: {
-    user: testAccount.user,
-    pass: testAccount.pass,
-  },
-});
+const transporter = await createTransporter();
 
-console.log(`📧 Ethereal test account ready: ${testAccount.user}`);
-
-// ฟังก์ชันพื้นฐานสำหรับส่งอีเมล แยกออกมาต่างหาก เพื่อให้สลับ provider จริงภายหลังง่าย แก้แค่ transporter ด้านบนพอ
+// ฟังก์ชันพื้นฐานสำหรับส่งอีเมล แยกออกมาต่างหาก เพื่อให้สลับ provider จริงภายหลังง่าย แก้แค่ createTransporter ด้านบนพอ
 async function sendEmail(options: {
   to: string;
   subject: string;
   html: string;
 }) {
+  // production ต้องใช้ GMAIL_USER เป็น from เท่านั้น ไม่งั้น Gmail จะเปลี่ยนให้เองอยู่ดี
+  const fromAddress =
+    process.env.NODE_ENV === "production"
+      ? `"Money Management App" <${process.env.GMAIL_USER}>`
+      : '"Money Management App" <no-reply@moneyapp.test>';
+
   const info = await transporter.sendMail({
-    from: '"Money Management App" <no-reply@moneyapp.test>',
+    from: fromAddress,
     to: options.to,
     subject: options.subject,
     html: options.html,
   });
 
-  // Ethereal ไม่ส่งอีเมลจริง แค่ให้ลิงก์ preview กลับมาดูหน้าตาอีเมลผ่าน browser
-  console.log(`📧 Preview email: ${nodemailer.getTestMessageUrl(info)}`);
+  // getTestMessageUrl คืนค่า false เองถ้าไม่ใช่ Ethereal เลย log แค่ตอน dev พอ
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`📧 Preview email: ${nodemailer.getTestMessageUrl(info)}`);
+  }
 
   return info;
 }
