@@ -253,7 +253,7 @@ export function LoginForm() {
                 />
 
                 {/* Remember Me */}
-                <div className="anime-row">
+                <div className="mb-4 flex items-center justify-between mt-5">
                   <label className="anime-check">
                     <input
                       type="checkbox"
@@ -262,6 +262,13 @@ export function LoginForm() {
                     />
                     <span>จดจำฉันไว้</span>
                   </label>
+
+                  <Link
+                    to="/forgot-password"
+                    className="text-[13px] font-semibold text-[#5568E0] no-underline mr-2"
+                  >
+                    ลืมรหัสผ่าน?
+                  </Link>
                 </div>
 
                 {/* Submit Button */}

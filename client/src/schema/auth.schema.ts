@@ -61,3 +61,32 @@ export const registerSchema = z
   });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
+
+// 3. Schema สำหรับ ForgotPasswordForm
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .min(1, "กรุณากรอก Email นะจ้ะ")
+    .email("รูปแบบ Email ไม่ถูกต้องนะจ้ะ"),
+});
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+// 4. Schema สำหรับ ResetPasswordForm
+export const resetPasswordSchema = z
+  .object({    
+    newPassword: z
+      .string()
+      .min(8, "รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษรนะจ้ะ")
+      .regex(/[A-Z]/, "รหัสผ่านต้องมีตัวพิมพ์ใหญ่อย่างน้อย 1 ตัวนะจ้ะ")
+      .regex(/[a-z]/, "รหัสผ่านต้องมีตัวพิมพ์เล็กอย่างน้อย 1 ตัวนะจ้ะ")
+      .regex(/[0-9]/, "รหัสผ่านต้องมีตัวเลขอย่างน้อย 1 ตัวนะจ้ะ")
+      .regex(/[^A-Za-z0-9]/, "รหัสผ่านต้องมีอักขระพิเศษอย่างน้อย 1 ตัวนะจ้ะ"),
+    confirmPassword: z.string().min(1, "กรุณายืนยันรหัสผ่านนะจ้ะ"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "รหัสผ่านไม่ตรงกันนะจ้ะ",
+    path: ["confirmPassword"],
+  });
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

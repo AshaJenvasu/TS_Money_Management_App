@@ -4,6 +4,7 @@ import {
   Link,
   Outlet,
   useNavigate,
+  useLocation,
 } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuthStore } from "../stores/useAuthStore";
@@ -21,6 +22,7 @@ function RootLayout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, token, logout, setAuth } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ตรวจสอบการเข้าสู่ระบบ
   useEffect(() => {
@@ -47,10 +49,13 @@ function RootLayout() {
   }, [token, setAuth, logout]);
 
   useEffect(() => {
-    if (token || user) {
+    // หน้าที่ user login แล้วไม่ควรเห็นอีก ให้เด้งไป dashboard อัตโนมัติ (หน้าอื่นๆทั้งหมดเข้าได้ปกติไม่ว่าจะ login อยู่หรือไม่)
+    const authOnlyPages = ["/login", "/register"];
+
+    if ((token || user) && authOnlyPages.includes(location.pathname)) {
       navigate({ to: "/dashboard", replace: true });
     }
-  }, [token, user, navigate]);
+  }, [token, user, navigate, location.pathname]);
 
   const handleLogout = async () => {
     try {
