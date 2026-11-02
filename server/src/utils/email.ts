@@ -1,28 +1,27 @@
 import nodemailer from "nodemailer";
+import sgMail from "@sendgrid/mail";
 
-// เลือก transporter ตาม environment — production ใช้ Gmail จริง dev ใช้ Ethereal (fake SMTP)
-async function createTransporter() {
-  if (process.env.NODE_ENV === "production") {
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-      throw new Error(
-        "GMAIL_USER or GMAIL_APP_PASSWORD is missing in environment variables (.env)",
-      );
-    }
+const isProduction = process.env.NODE_ENV === "production";
 
-    return nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
-      },
-    });
+// เตรียมตัวส่งอีเมลตาม environment ตอน server เริ่มทำงาน
+let etherealTransporter: nodemailer.Transporter | undefined;
+
+if (isProduction) {
+  if (
+    !process.env.SENDGRID_API_KEY ||
+    !process.env.SENDGRID_VERIFIED_SENDER_EMAIL
+  ) {
+    throw new Error(
+      "SENDGRID_API_KEY or SENDGRID_VERIFIED_SENDER_EMAIL is missing in environment variables (.env)",
+    );
   }
-
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+} else {
   // dev: สร้าง Ethereal test account อัตโนมัติตอน server เริ่มทำงาน ไม่ต้องสมัครเองล่วงหน้า
   const testAccount = await nodemailer.createTestAccount();
   console.log(`📧 Ethereal test account ready: ${testAccount.user}`);
 
-  return nodemailer.createTransport({
+  etherealTransporter = nodemailer.createTransport({
     host: testAccount.smtp.host,
     port: testAccount.smtp.port,
     secure: testAccount.smtp.secure,
@@ -33,34 +32,32 @@ async function createTransporter() {
   });
 }
 
-// Transporter ตัวเดียวใช้ร่วมกันทั้งแอป เหมือน pattern ของ prisma client ใน config/prisma.ts
-const transporter = await createTransporter();
-
-// ฟังก์ชันพื้นฐานสำหรับส่งอีเมล แยกออกมาต่างหาก เพื่อให้สลับ provider จริงภายหลังง่าย แก้แค่ createTransporter ด้านบนพอ
+// ฟังก์ชันพื้นฐานสำหรับส่งอีเมล แยก production (SendGrid HTTP API) กับ dev (Ethereal SMTP) ออกจากกัน
 async function sendEmail(options: {
   to: string;
   subject: string;
   html: string;
 }) {
-  // production ต้องใช้ GMAIL_USER เป็น from เท่านั้น ไม่งั้น Gmail จะเปลี่ยนให้เองอยู่ดี
-  const fromAddress =
-    process.env.NODE_ENV === "production"
-      ? `"Money Management App" <${process.env.GMAIL_USER}>`
-      : '"Money Management App" <no-reply@moneyapp.test>';
+  if (isProduction) {
+    // ส่งผ่าน HTTPS ตรงๆ ไม่ผ่าน SMTP เลย เพราะ Render บล็อก SMTP port บน free tier
+    await sgMail.send({
+      to: options.to,
+      from: process.env.SENDGRID_VERIFIED_SENDER_EMAIL!,
+      subject: options.subject,
+      html: options.html,
+    });
+    return;
+  }
 
-  const info = await transporter.sendMail({
-    from: fromAddress,
+  // dev: ยังใช้ Ethereal เหมือนเดิม เพราะรันบนเครื่องตัวเอง ไม่ติด firewall ของ Render
+  const info = await etherealTransporter!.sendMail({
+    from: '"Money Management App" <no-reply@moneyapp.test>',
     to: options.to,
     subject: options.subject,
     html: options.html,
   });
 
-  // getTestMessageUrl คืนค่า false เองถ้าไม่ใช่ Ethereal เลย log แค่ตอน dev พอ
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`📧 Preview email: ${nodemailer.getTestMessageUrl(info)}`);
-  }
-
-  return info;
+  console.log(`📧 Preview email: ${nodemailer.getTestMessageUrl(info)}`);
 }
 
 // ฟังก์ชันสำหรับส่ง reset password link โดยเฉพาะ ประกอบเนื้อหาอีเมลไว้ที่เดียว
