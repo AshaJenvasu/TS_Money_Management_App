@@ -669,66 +669,75 @@ function DashboardPage() {
                   </div>
                 </div>
 
-                <label className="form-control">
-                  <span className="label-text mb-2 font-medium text-[#39365F]">
-                    Wallet Name
-                  </span>
+                {/* เพิ่ม form ครอบ เพื่อให้ Enter trigger submit ได้เหมือนหน้า Wallets */}
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleCreateWallet();
+                  }}
+                >
+                  <label className="form-control">
+                    <span className="label-text mb-2 font-medium text-[#39365F]">
+                      Wallet Name
+                    </span>
 
-                  <input
-                    type="text"
-                    className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
-                    placeholder="Enter wallet name"
-                    value={walletName}
-                    onChange={(e) => {
-                      setWalletName(e.target.value);
-                      setValidationError("");
-                      setErrorMessage("");
-                    }}
-                    maxLength={100}
-                    autoFocus
-                    disabled={createMutation.isPending}
-                  />
+                    <input
+                      type="text"
+                      className="input input-bordered w-full bg-white text-[#39365F] focus:border-[#7566C7] focus:outline-none"
+                      placeholder="Enter wallet name"
+                      value={walletName}
+                      onChange={(e) => {
+                        setWalletName(e.target.value);
+                        setValidationError("");
+                        setErrorMessage("");
+                      }}
+                      maxLength={100}
+                      autoFocus
+                      disabled={createMutation.isPending}
+                    />
 
-                  {validationError && (
-                    <p className="mt-2 text-sm text-error">{validationError}</p>
-                  )}
-                </label>
-
-                {errorMessage && (
-                  <p className="mt-3 text-sm text-error">{errorMessage}</p>
-                )}
-
-                <div className="mt-8 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => setIsCreateOpen(false)}
-                    disabled={createMutation.isPending}
-                  >
-                    ยกเลิก
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn border-0 bg-[#7566C7] text-white hover:bg-[#6356B8]"
-                    onClick={handleCreateWallet}
-                    disabled={
-                      !walletName.trim() ||
-                      walletName.trim().length > 100 ||
-                      createMutation.isPending ||
-                      wallets.length >= 4
-                    }
-                  >
-                    {createMutation.isPending ? (
-                      <>
-                        <span className="loading loading-spinner loading-sm" />
-                        กำลังสร้าง...
-                      </>
-                    ) : (
-                      "สร้างกระเป๋า"
+                    {validationError && (
+                      <p className="mt-2 text-sm text-error">
+                        {validationError}
+                      </p>
                     )}
-                  </button>
-                </div>
+                  </label>
+
+                  {errorMessage && (
+                    <p className="mt-3 text-sm text-error">{errorMessage}</p>
+                  )}
+
+                  <div className="mt-8 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => setIsCreateOpen(false)}
+                      disabled={createMutation.isPending}
+                    >
+                      ยกเลิก
+                    </button>
+
+                    <button
+                      type="submit"
+                      className="btn border-0 bg-[#7566C7] text-white hover:bg-[#6356B8]"
+                      disabled={
+                        !walletName.trim() ||
+                        walletName.trim().length > 100 ||
+                        createMutation.isPending ||
+                        wallets.length >= 4
+                      }
+                    >
+                      {createMutation.isPending ? (
+                        <>
+                          <span className="loading loading-spinner loading-sm" />
+                          กำลังสร้าง...
+                        </>
+                      ) : (
+                        "สร้างกระเป๋า"
+                      )}
+                    </button>
+                  </div>
+                </form>
               </div>
 
               <button
@@ -744,6 +753,7 @@ function DashboardPage() {
             </div>,
             document.body,
           )}
+
         {/* เปิด Dialog สำหรับแก้ไขธุรกรรมที่เลือก */}
         {editingTransaction && (
           <TransactionEditDialog
