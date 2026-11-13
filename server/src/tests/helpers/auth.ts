@@ -13,11 +13,14 @@ export async function createTestUserWithToken() {
 
   // 2. สร้าง JWT Token
   const secret = process.env.JWT_SECRET!;
+  // auth.middleware ปฏิเสธ token ที่ไม่มี iat (fail-closed) จึงต้องใส่ iat ด้วย
+  const nowSeconds = Math.floor(Date.now() / 1000);
   const token = await sign(
     {
       id: testUser.id.toString(),
       userId: testUser.id.toString(),
-      exp: Math.floor(Date.now() / 1000) + 60 * 60,
+      iat: nowSeconds,
+      exp: nowSeconds + 60 * 60,
     },
     secret,
     "HS256",

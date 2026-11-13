@@ -1,6 +1,9 @@
 import { prisma } from "../config/prisma.js";
 import { Prisma, PortfolioTransactionType } from "@prisma/client";
 import { PortfolioRepository } from "../repositories/portfolio.repository.js";
+import { CoinGeckoPriceProvider } from "./price.provider.js";
+
+const priceProvider = new CoinGeckoPriceProvider();
 
 interface CreatePortfolioTransactionInput {
   userId: bigint;
@@ -37,22 +40,69 @@ export class PortfolioService {
       throw new Error("PORTFOLIO_NOT_FOUND");
     }
 
+    // ขอราคาตลาดเฉพาะ crypto holding
+    const cryptoSymbols = portfolio.holdings
+      .filter((holding) => holding.asset.assetType === "crypto")
+      .map((holding) => holding.asset.symbol.toUpperCase());
+    const prices = await priceProvider.getPrices(cryptoSymbols);
+
     return {
       id: portfolio.id.toString(),
       userId: portfolio.userId.toString(),
-      holdings: portfolio.holdings.map((holding) => ({
-        id: holding.id.toString(),
-        portfolioId: holding.portfolioId.toString(),
-        assetId: holding.assetId.toString(),
-        quantity: holding.quantity.toString(),
-        avgCostPerUnit: holding.avgCostPerUnit.toString(),
-        asset: {
-          id: holding.asset.id.toString(),
-          name: holding.asset.name,
-          symbol: holding.asset.symbol,
-          assetType: holding.asset.assetType,
-        },
-      })),
+      holdings: portfolio.holdings.map((holding) => {
+        const price = prices.get(holding.asset.symbol.toUpperCase());
+
+        return {
+          id: holding.id.toString(),
+          portfolioId: holding.portfolioId.toString(),
+          assetId: holding.assetId.toString(),
+          quantity: holding.quantity.toString(),
+          avgCostPerUnit: holding.avgCostPerUnit.toString(),
+          asset: {
+            id: holding.asset.id.toString(),
+            name: holding.asset.name,
+            symbol: holding.asset.symbol,
+            assetType: holding.asset.assetType,
+          },
+          ...PortfolioService.buildValuation(
+            holding.quantity,
+            holding.avgCostPerUnit,
+            price,
+          ),
+        };
+      }),
+    };
+  }
+
+  // คำนวณมูลค่าปัจจุบันและกำไร/ขาดทุนที่ยังไม่รับรู้ ถ้าไม่มีราคาให้คืน null และ priceUnavailable = true
+  private static buildValuation(
+    quantity: Prisma.Decimal,
+    avgCostPerUnit: Prisma.Decimal,
+    price: number | undefined,
+  ) {
+    if (price === undefined) {
+      return {
+        currentPrice: null,
+        currentValue: null,
+        unrealizedPnl: null,
+        unrealizedPnlPercent: null,
+        priceUnavailable: true,
+      };
+    }
+
+    const currentPrice = new Prisma.Decimal(price);
+    const currentValue = quantity.mul(currentPrice);
+    const totalCost = quantity.mul(avgCostPerUnit);
+    const unrealizedPnl = currentValue.minus(totalCost);
+
+    return {
+      currentPrice: currentPrice.toString(),
+      currentValue: currentValue.toString(),
+      unrealizedPnl: unrealizedPnl.toString(),
+      unrealizedPnlPercent: totalCost.isZero()
+        ? null
+        : unrealizedPnl.div(totalCost).mul(100).toString(),
+      priceUnavailable: false,
     };
   }
 

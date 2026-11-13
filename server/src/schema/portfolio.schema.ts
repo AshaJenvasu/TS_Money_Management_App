@@ -20,6 +20,11 @@ export const PortfolioHoldingItemSchema = z.object({
     symbol: z.string(),
     assetType: z.string(),
   }),
+  currentPrice: z.string().nullable(),
+  currentValue: z.string().nullable(),
+  unrealizedPnl: z.string().nullable(),
+  unrealizedPnlPercent: z.string().nullable(),
+  priceUnavailable: z.boolean(),
 });
 
 export const GetPortfolioResponseSchema = z.object({
