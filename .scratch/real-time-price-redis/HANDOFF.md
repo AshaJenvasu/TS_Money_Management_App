@@ -48,6 +48,12 @@
 - try/catch ครอบ Redis ล้มด้วย (ยังไม่มี test แยกสำหรับ Redis error)
 - ถัดไป: AC5 (stock → null/`priceUnavailable: true`)
 
+## อัปเดต AC5 (2026-11-13) — ticket 01 ครบ AC1-AC5
+- AC5 เสร็จ: test ผ่านทันทีโดยไม่เพิ่มโค้ด (filter เฉพาะ crypto ใน `getPortfolio` ครอบคลุมอยู่แล้ว) ตรวจด้วย mutation check: ถอด filter ออกชั่วคราว test ล้ม (`expected '72000' to be null`) แล้วคืนโค้ดเดิม ผ่าน 6/6
+- test ใช้ stock ที่ symbol ตรงกับเหรียญ (`BTC`) เพื่อพิสูจน์ว่า stock ไม่ถูกส่งไปขอราคา crypto
+- เหลือก่อนปิด ticket 01: ตั้ง `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` ใน `server/.env` (และ env บน Render), รัน biome (`bun run lint-format`), commit
+- ถัดไป: ticket 02 (frontend) และ 03 (rate limit `/auth/forgot-password`) ทำขนานกันได้
+
 ## ขั้นตอนเดิม (ข้อ 1-4 เสร็จแล้ว)
 1. เปิด Docker Desktop แล้วรัน `docker compose up -d postgres` ใน `server/`
 2. รัน `npx vitest run src/tests/integration-tests/wallets.test.ts` ยืนยันว่า DB ใช้ได้ (ต้องเขียวเหมือนเดิม)

@@ -193,6 +193,36 @@ describe("GET /api/v1/portfolio - real-time crypto price", () => {
     expect(coingeckoFetch).toHaveBeenCalledTimes(2);
   });
 
+  test("🟢 AC5 Stock out of scope: should return null price and priceUnavailable=true without calling CoinGecko", async () => {
+    // Arrange: ถือหุ้นที่ใช้ symbol ตรงกับเหรียญใน CoinGecko (BTC) เพื่อให้แน่ใจว่าไม่ถูกเอาไปหาราคา crypto
+    const { testUser, authHeader } = await createTestUserWithToken();
+    await createPortfolioWithHolding(testUser.id, {
+      symbol: "BTC",
+      name: "[TEST] Stock With Crypto Symbol",
+      assetType: "stock",
+      quantity: "10",
+      avgCostPerUnit: "100",
+    });
+    stubCoinGeckoPrices({ BTC: 72000 });
+
+    // Act
+    const res = await app.request("/api/v1/portfolio", {
+      method: "GET",
+      headers: { ...authHeader },
+    });
+    const body = await res.json();
+
+    // Assert: ตอบ 200 ด้วยรูปแบบเดียวกับ AC4 และไม่ยิง CoinGecko เลย
+    expect(res.status).toBe(200);
+    const holding = body.holdings[0];
+    expect(holding.currentPrice).toBeNull();
+    expect(holding.currentValue).toBeNull();
+    expect(holding.unrealizedPnl).toBeNull();
+    expect(holding.unrealizedPnlPercent).toBeNull();
+    expect(holding.priceUnavailable).toBe(true);
+    expect(coingeckoFetch).not.toHaveBeenCalled();
+  });
+
   describe("🔴 AC4 CoinGecko fails and no cached price", () => {
     const failureModes: Array<[string, () => void]> = [
       [
