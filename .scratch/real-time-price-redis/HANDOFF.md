@@ -11,8 +11,8 @@
 ## Decisions ที่ตกลงแล้ว
 - Test seams: integration test ที่ `GET /api/v1/portfolio` ผ่าน `app.request` (DB จริง) mock เฉพาะ Redis และ CoinGecko
 - ชื่อ field ใน response เป็น camelCase ตาม response เดิม: `currentPrice`, `currentValue`, `unrealizedPnl`, `unrealizedPnlPercent`, `priceUnavailable`
-- สกุลเงิน USD; map `Asset.symbol` ไป CoinGecko ผ่าน param `symbols`
-- เรียก CoinGecko ที่ `/coins/markets?vs_currency=usd&symbols=btc,eth` (ไม่ใช้ `/simple/price` เพราะ response ใช้ id เป็น key จับคู่กลับหา symbol ไม่ได้)
+- สกุลเงิน THB (เปลี่ยนจาก USD เมื่อ 2026-11-13 เพราะ UI แสดง ฿ และ user กรอกต้นทุนเป็นบาท); map `Asset.symbol` ไป CoinGecko ผ่าน param `symbols`
+- เรียก CoinGecko ที่ `/coins/markets?vs_currency=thb&symbols=btc,eth` (ไม่ใช้ `/simple/price` เพราะ response ใช้ id เป็น key จับคู่กลับหา symbol ไม่ได้)
 - Redis client อยู่ที่ `server/src/config/redis.ts` export ชื่อ `redis` (Upstash, method `get`, `set(key, value, { ex })`) — test mock โมดูลนี้ด้วย `vi.mock("../../config/redis")`
 - ลำดับ AC (vertical slice, ทีละ test): AC1 → AC2 → AC3 → AC4 → AC5
 - TTL 1-5 นาที; ไม่เพิ่ม column ใน `assets`
@@ -31,7 +31,7 @@
 - ถัดไป: AC2 (cache hit) — เขียน test แดงก่อน แล้วสร้าง `src/config/redis.ts` + cache-aside ใน provider
 
 ## อัปเดต AC2 (2026-11-13)
-- AC2 RED → GREEN เสร็จ (`portfolio-price.test.ts` ผ่าน 2/2) เพิ่ม `server/src/config/redis.ts` (`Redis.fromEnv()`) และ `CachedPriceProvider` ใน `price.provider.ts` (key `price:usd:<SYMBOL>`, TTL 120 วินาที, cache รายตัว)
+- AC2 RED → GREEN เสร็จ (`portfolio-price.test.ts` ผ่าน 2/2) เพิ่ม `server/src/config/redis.ts` (`Redis.fromEnv()`) และ `CachedPriceProvider` ใน `price.provider.ts` (key `price:thb:<SYMBOL>`, TTL 120 วินาที, cache รายตัว)
 - `portfolio.services.ts` ใช้ `new CachedPriceProvider(new CoinGeckoPriceProvider())`
 - ต้องตั้ง `UPSTASH_REDIS_REST_URL` และ `UPSTASH_REDIS_REST_TOKEN` ใน `server/.env` (ตอนนี้ยังไม่มี: import แล้วขึ้น warning ไม่ throw แต่เรียกจริงจะ error → AC4 ต้องรองรับกรณี Redis/CoinGecko ล้ม)
 - `wallets.test.ts` ยังล้ม 3/23 เท่าเดิม ไม่ได้ผลจากงานนี้
@@ -62,3 +62,34 @@
 5. วนต่อ RED → GREEN สำหรับ AC2, AC3, AC4, AC5 ทีละข้อ (ใช้ skill `mattpocock-skills:tdd`)
 6. จบ ticket 01 แล้วค่อยทำ 02 และ 03
 - ต้องตั้ง env ใหม่ใน `server/.env` ตอนทำจริง: Upstash REST URL และ token (ยังไม่มี)
+
+## อัปเดต ticket 02 (2026-11-13)
+- เปลี่ยนสกุลเงินราคาเป็น THB ที่ `server/src/services/price.provider.ts` (`PRICE_CURRENCY = "thb"`, cache key `price:thb:<SYMBOL>`) เพราะ UI แสดง ฿; server test ผ่าน 6/6
+- ฝั่ง client (ยังไม่ได้ commit): `services/portfolio.services.ts` (field ใหม่), `types/investment.ts` (`AssetView` เพิ่ม field ราคา), `routes/investment.tsx` (map field + คำนวณ `marketSummary` เฉพาะสินทรัพย์ที่มีราคา), `components/investment/PnlText.tsx` (ใหม่: เขียว/แดง/เทา), `AssetListItem.tsx` (แถวมูลค่าปัจจุบัน + P&L หรือ "ราคาไม่พร้อมใช้งาน"), `PortfolioSummaryCard.tsx` (มูลค่าตลาดรวม + P&L รวม + หมายเหตุล่าช้าได้ถึง 2 นาที)
+- `tsc -b` ผ่าน; eslint ไม่มี error (warning 4 ข้อของเดิมใน `investment.tsx`)
+- client ไม่มี test framework จึงยังไม่มี test; ยังไม่ได้ลองบนเบราว์เซอร์ (ต้องตั้ง Upstash env ก่อน)
+- loading state: ใช้ spinner เต็มหน้าเดิม (ราคาอยู่ใน query `portfolio` เดียวกัน)
+- ถัดไป: ticket 03 (rate limit `/auth/forgot-password`)
+
+## อัปเดตแผน (2026-11-13) — เจอช่องโหว่ symbol ชนกัน
+ลำดับใหม่: **ticket 04 → งานเพิ่มใน ticket 01 → ticket 03 → Quality Gate**
+- ticket 04 (ไฟล์ `issues/04-asset-identity-coingecko-id.md`): เพิ่ม `Asset.coingeckoId`, endpoint `GET /assets/search-coins?q=`, บังคับ id เมื่อสร้าง crypto asset, `price.provider.ts` ใช้ `ids=` และ cache key `price:thb:<coingeckoId>`
+- งานเพิ่มใน ticket 01: regex `^[A-Za-z0-9]{1,10}$` ที่ symbol, cache ผล "ไม่เจอ" ~5 นาที
+- ตรวจ DB local แล้ว: มี asset เดียวคือ BTC ของ user ทดสอบ ลบได้ ไม่ต้อง backfill (production ต้องตรวจก่อน deploy)
+- ticket 02 (frontend) ยังต้องแก้ฟอร์มสร้าง asset ให้ค้นหา+เลือกเหรียญ (`AssetCreateDialog.tsx`)
+- สถานะ ticket 04: เริ่มขั้น RED ของ `GET /assets/search-coins` (`server/src/tests/integration-tests/asset-search-coins.test.ts`)
+
+## อัปเดต ticket 04 — ฝั่ง backend เสร็จ (2026-11-13)
+- migration `server/prisma/migrations/20261113061422_add_asset_coingecko_id` (เพิ่ม `assets.coingecko_id` VARCHAR(100) nullable) apply บน DB local แล้ว; ก่อน deploy ต้องรัน `bun run db:deploy` และตรวจข้อมูลเดิมบน production (asset crypto เดิมจะได้ราคา null จนกว่าจะมี `coingecko_id`)
+- `GET /api/v1/assets/search-coins?q=` (ไฟล์ใหม่ `controllers/coin-search.controllers.ts`, `services/coin-search.services.ts`; ต้องลงทะเบียนก่อน `assetController` ใน `index.ts`): 200 คืน `{id, symbol, name}[]`, 400 ถ้า `q` ว่าง, 401 ถ้าไม่ login, 502 ถ้า CoinGecko ล้ม — test `asset-search-coins.test.ts` ผ่าน 6/6
+- `POST /api/v1/assets`: รับ `coingecko_id` (บังคับเมื่อ `asset_type` เป็น crypto, stock เป็น null ได้) response ของ asset ทุก endpoint มี `coingecko_id` — test `asset-create.test.ts` ผ่าน 3/3
+- `price.provider.ts` ใช้ `ids=` และ cache key `price:thb:<coingeckoId>`; `getPortfolio` ขอราคาเฉพาะ crypto ที่มี `coingeckoId` — `portfolio-price.test.ts` ผ่าน 8/8 (เพิ่ม test symbol ชนกัน และ asset crypto เดิมที่ไม่มี id)
+- ยังเหลือ: (1) frontend `AssetCreateDialog.tsx` ค้นหา+เลือกเหรียญ และส่ง `coingecko_id` (2) ticket 01 งานเพิ่ม: regex symbol `^[A-Za-z0-9]{1,10}$` + cache ผล "ไม่เจอ" ~5 นาที (3) ticket 03
+- ข้อควรระวัง: รัน integration test ทีละไฟล์ (แชร์ DB)
+
+## อัปเดต (2026-11-13) — ticket 04 frontend + งานเพิ่มใน ticket 01 เสร็จ
+- ฟอร์มสร้าง asset (`client/src/components/investment/AssetCreateDialog.tsx`): ประเภท crypto ต้องค้นหา (หน่วง 300ms) และเลือกเหรียญจากรายการ ส่ง `coingecko_id` ไป `POST /assets`; symbol/name เติมอัตโนมัติและแก้ได้; symbol รับเฉพาะ A-Z a-z 0-9 ไม่เกิน 10 ตัว; stock ยังพิมพ์เองได้ ไม่ต้องมี id
+- ไฟล์ client ใหม่/แก้: `hooks/useCoinSearchQuery.ts` (ใหม่), `services/asset.services.ts` (`searchCoins`, `coingecko_id`); `tsc -b` และ eslint ผ่าน
+- ticket 01 งานเพิ่ม: symbol ต้องตรง `^[A-Za-z0-9]{1,10}$` (test 3 กรณี), cache ผล "ไม่เจอ" 5 นาที (`NOT_FOUND_MARKER` ใน `price.provider.ts`) — `portfolio-price.test.ts` ผ่าน 9/9, `asset-create.test.ts` 6/6, `asset-search-coins.test.ts` 6/6 (รันทีละไฟล์)
+- ยังเหลือ: ทดสอบหน้า Investment บนเบราว์เซอร์จริง (ต้องตั้ง `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`), ticket 03 (rate limit `/auth/forgot-password`), Quality Gate (grill-me, regression ทั้งหมด, E2E Playwright, code review, security review)
+- ข้อสังเกต: asset crypto ที่สร้างก่อนมี `coingecko_id` จะได้ราคา null จนกว่าจะสร้างใหม่ (ยังไม่มี flow แก้ id ให้ asset เดิม: `PUT /assets/:id` แก้ได้แค่ชื่อ)

@@ -12,6 +12,12 @@ export interface PortfolioHolding {
     symbol: string;
     assetType: string;
   };
+  // ราคาตลาดและกำไร/ขาดทุนที่ยังไม่รับรู้ (บาท) เป็น null เมื่อดึงราคาไม่ได้หรือไม่ใช่ crypto
+  currentPrice: string | null;
+  currentValue: string | null;
+  unrealizedPnl: string | null;
+  unrealizedPnlPercent: string | null;
+  priceUnavailable: boolean;
 }
 
 export interface Portfolio {

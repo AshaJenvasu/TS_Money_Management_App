@@ -2,6 +2,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import HeroDecor from "../wallet-detail/HeroDecor";
 import type { AssetView } from "../../types/investment";
 import { formatCurrency } from "../../utils/formatCurrency";
+import { PnlText } from "./PnlText";
 
 const DONUT_COLORS = [
   "#7566C7",
@@ -13,15 +14,24 @@ const DONUT_COLORS = [
   "#E2779E",
 ];
 
+interface MarketSummary {
+  totalCurrentValue: number;
+  totalUnrealizedPnl: number;
+  // จำนวนสินทรัพย์ที่ถืออยู่แต่ไม่มีราคา (ไม่นับรวมในมูลค่าตลาดและกำไร/ขาดทุน)
+  unpricedCount: number;
+}
+
 interface PortfolioSummaryCardProps {
   totalCost: number;
   heldAssetViews: AssetView[];
+  marketSummary: MarketSummary | null;
 }
 
 // การ์ดสรุปต้นทุนรวมของพอร์ต พร้อม donut chart และ legend สัดส่วนตามสินทรัพย์
 export function PortfolioSummaryCard({
   totalCost,
   heldAssetViews,
+  marketSummary,
 }: PortfolioSummaryCardProps) {
   return (
     <section className="relative mb-6 flex flex-wrap items-center gap-4 overflow-hidden rounded-[26px] bg-white/90 p-5 shadow-sm">
@@ -35,8 +45,26 @@ export function PortfolioSummaryCard({
           {heldAssetViews.length} สินทรัพย์
         </span>
         <p className="mt-3 text-xs leading-relaxed text-[#5C6899]">
-          คำนวณจากต้นทุนเฉลี่ยที่คุณบันทึก ไม่ใช่ราคาตลาดปัจจุบัน
+          ต้นทุนคำนวณจากต้นทุนเฉลี่ยที่คุณบันทึก
         </p>
+        {marketSummary && (
+          <div className="mt-3 border-t border-[#E6EAF8] pt-3">
+            <p className="text-sm font-medium text-[#5C6899]">
+              มูลค่าตลาดปัจจุบัน
+            </p>
+            <p className="mt-1 text-xl font-extrabold">
+              ฿{formatCurrency(marketSummary.totalCurrentValue)}
+            </p>
+            <p className="mt-1 text-sm font-bold">
+              <PnlText pnl={marketSummary.totalUnrealizedPnl} />
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-[#5C6899]">
+              ราคาจากตลาดอาจล่าช้าได้ถึง 2 นาที
+              {marketSummary.unpricedCount > 0 &&
+                ` · ไม่รวม ${marketSummary.unpricedCount} สินทรัพย์ที่ไม่มีราคา`}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="relative mx-auto size-40 shrink-0">

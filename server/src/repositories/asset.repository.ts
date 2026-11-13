@@ -35,6 +35,7 @@ export class AssetRepository {
     name: string;
     symbol: string;
     assetType: AssetType;
+    coingeckoId?: string | null;
   }) {
     return await prisma.asset.create({
       data,

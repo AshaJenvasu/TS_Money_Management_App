@@ -35,3 +35,8 @@ So that รู้กำไร/ขาดทุนที่ยังไม่ร�
 - seams ที่จะ test
 - ชื่อ field: snake_case (ตาม AC) หรือ camelCase (ตาม response เดิม เช่น `avgCostPerUnit`)
 - สกุลเงินของราคา (`vs_currency`) และวิธี map `Asset.symbol` → CoinGecko (ตอนนี้ `Asset` มีแค่ `symbol` VarChar(10))
+
+## งานเพิ่มเล็กน้อย (ตกลงเมื่อ 2026-11-13, ทำหลัง ticket 04)
+
+1. `asset.schema.ts`: จำกัด `symbol` ด้วย regex `^[A-Za-z0-9]{1,10}$` (ปิดช่องโหว่ symbol ที่มีเครื่องหมายจุลภาค)
+2. `price.provider.ts`: cache ผล "ไม่เจอ" ด้วย TTL สั้น (~5 นาที) กันยิง CoinGecko ซ้ำเมื่อ id ไม่เจอ (เช่นเหรียญถูก delist)

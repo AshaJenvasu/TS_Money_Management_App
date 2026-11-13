@@ -30,6 +30,11 @@ import {
 import type { AssetView } from "../types/investment";
 import type { PortfolioTransactionListItem } from "../services/portfolio.services";
 
+// แปลง string จาก API เป็น number โดยคง null/undefined ไว้เป็น null
+function toNumberOrNull(value: string | null | undefined): number | null {
+  return value == null ? null : Number(value);
+}
+
 function InvestmentPage() {
   const navigate = useNavigate();
 
@@ -105,6 +110,11 @@ function InvestmentPage() {
         buyCount,
         sellCount,
         lastTransactionDate,
+        currentPrice: toNumberOrNull(holding?.currentPrice),
+        currentValue: toNumberOrNull(holding?.currentValue),
+        unrealizedPnl: toNumberOrNull(holding?.unrealizedPnl),
+        unrealizedPnlPercent: toNumberOrNull(holding?.unrealizedPnlPercent),
+        priceUnavailable: holding?.priceUnavailable ?? false,
       };
     });
   }, [assets, holdings, transactions]);
@@ -114,6 +124,22 @@ function InvestmentPage() {
     [assetViews],
   );
   const totalCost = heldAssetViews.reduce((sum, view) => sum + view.cost, 0);
+
+  // สรุปมูลค่าตลาดรวม คิดเฉพาะสินทรัพย์ที่มีราคา และเทียบกับต้นทุนของสินทรัพย์ชุดเดียวกันเท่านั้น
+  const pricedViews = heldAssetViews.filter((view) => view.currentValue !== null);
+  const totalCurrentValue = pricedViews.reduce(
+    (sum, view) => sum + (view.currentValue ?? 0),
+    0,
+  );
+  const pricedCost = pricedViews.reduce((sum, view) => sum + view.cost, 0);
+  const marketSummary =
+    pricedViews.length > 0
+      ? {
+          totalCurrentValue,
+          totalUnrealizedPnl: totalCurrentValue - pricedCost,
+          unpricedCount: heldAssetViews.length - pricedViews.length,
+        }
+      : null;
 
   const filteredAssetViews = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -218,6 +244,7 @@ function InvestmentPage() {
           <PortfolioSummaryCard
             totalCost={totalCost}
             heldAssetViews={heldAssetViews}
+            marketSummary={marketSummary}
           />
         </div>
 

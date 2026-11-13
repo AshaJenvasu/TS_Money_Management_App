@@ -1,36 +1,54 @@
 import { redis } from "../config/redis.js";
 
-// ผู้ให้ราคาตลาด: คืน Map ของ symbol (ตัวพิมพ์ใหญ่) -> ราคา USD เฉพาะ symbol ที่หาราคาเจอ
+// สกุลเงินของราคาตลาด ต้องตรงกับสกุลที่ UI แสดงและที่ user กรอกต้นทุน (บาท) ไม่งั้น P&L จะผิด
+const PRICE_CURRENCY = "thb";
+
+// ผู้ให้ราคาตลาด: รับ CoinGecko id (เช่น "bitcoin") คืน Map ของ id -> ราคาเป็นบาท เฉพาะ id ที่หาราคาเจอ
+// ใช้ id แทน ticker symbol เพราะ symbol ซ้ำกันได้ ทำให้ได้ราคาผิดเหรียญ
 export interface PriceProvider {
-  getPrices(symbols: string[]): Promise<Map<string, number>>;
+  getPrices(coinIds: string[]): Promise<Map<string, number>>;
 }
 
 // Cache-aside: เช็ค Redis ก่อนเสมอ ถ้า miss ค่อยถาม provider จริงแล้ว cache ทับ
 const PRICE_CACHE_TTL_SECONDS = 120;
 
+// ผล "ไม่เจอ" (เช่นเหรียญถูก delist) cache สั้น ๆ กันยิง CoinGecko ซ้ำทุก request แต่ยังลองใหม่ได้เมื่อหมดอายุ
+const NOT_FOUND_MARKER = "not-found";
+const NOT_FOUND_CACHE_TTL_SECONDS = 300;
+
 export class CachedPriceProvider implements PriceProvider {
   constructor(private readonly inner: PriceProvider) {}
 
-  async getPrices(symbols: string[]): Promise<Map<string, number>> {
+  async getPrices(coinIds: string[]): Promise<Map<string, number>> {
     const prices = new Map<string, number>();
     const missing: string[] = [];
 
-    for (const symbol of symbols) {
-      const cached = await redis.get<number>(`price:usd:${symbol}`);
+    for (const coinId of coinIds) {
+      const cached = await redis.get<number | typeof NOT_FOUND_MARKER>(
+        `price:${PRICE_CURRENCY}:${coinId}`,
+      );
       if (cached === null) {
-        missing.push(symbol);
-      } else {
-        prices.set(symbol, cached);
+        missing.push(coinId);
+      } else if (cached !== NOT_FOUND_MARKER) {
+        prices.set(coinId, cached);
       }
     }
 
     if (missing.length > 0) {
       const fetched = await this.inner.getPrices(missing);
-      for (const [symbol, price] of fetched) {
-        prices.set(symbol, price);
-        await redis.set(`price:usd:${symbol}`, price, {
+      for (const [coinId, price] of fetched) {
+        prices.set(coinId, price);
+        await redis.set(`price:${PRICE_CURRENCY}:${coinId}`, price, {
           ex: PRICE_CACHE_TTL_SECONDS,
         });
+      }
+
+      for (const coinId of missing) {
+        if (!fetched.has(coinId)) {
+          await redis.set(`price:${PRICE_CURRENCY}:${coinId}`, NOT_FOUND_MARKER, {
+            ex: NOT_FOUND_CACHE_TTL_SECONDS,
+          });
+        }
       }
     }
 
@@ -39,7 +57,7 @@ export class CachedPriceProvider implements PriceProvider {
 }
 
 interface CoinGeckoMarketItem {
-  symbol: string;
+  id: string;
   current_price: number | null;
 }
 
@@ -47,13 +65,13 @@ const COINGECKO_MARKETS_URL = "https://api.coingecko.com/api/v3/coins/markets";
 const COINGECKO_TIMEOUT_MS = 5000;
 
 export class CoinGeckoPriceProvider implements PriceProvider {
-  async getPrices(symbols: string[]): Promise<Map<string, number>> {
+  async getPrices(coinIds: string[]): Promise<Map<string, number>> {
     const prices = new Map<string, number>();
-    if (symbols.length === 0) return prices;
+    if (coinIds.length === 0) return prices;
 
     const query = new URLSearchParams({
-      vs_currency: "usd",
-      symbols: symbols.map((symbol) => symbol.toLowerCase()).join(","),
+      vs_currency: PRICE_CURRENCY,
+      ids: coinIds.join(","),
     });
     const response = await fetch(`${COINGECKO_MARKETS_URL}?${query}`, {
       signal: AbortSignal.timeout(COINGECKO_TIMEOUT_MS),
@@ -65,7 +83,7 @@ export class CoinGeckoPriceProvider implements PriceProvider {
 
     for (const item of items) {
       if (item.current_price !== null) {
-        prices.set(item.symbol.toUpperCase(), item.current_price);
+        prices.set(item.id, item.current_price);
       }
     }
     return prices;

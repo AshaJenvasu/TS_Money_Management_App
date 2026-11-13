@@ -10,6 +10,7 @@ import { authController } from "./controllers/auth.controllers.js";
 import { walletController } from "./controllers/wallet.controllers.js";
 import { transactionController } from "./controllers/transaction.controllers.js";
 import { assetController } from "./controllers/asset.controllers.js";
+import { coinSearchController } from "./controllers/coin-search.controllers.js";
 import { portfolioController } from "./controllers/portfolio.controllers.js";
 import { cors } from "hono/cors";
 
@@ -67,6 +68,8 @@ api.route("/", healthController);
 api.route("/", authController);
 api.route("/", walletController);
 api.route("/", transactionController);
+// coinSearchController ต้องมาก่อน assetController: /assets/search-coins ต้องไม่ถูก /assets/{id} ดักไปก่อน
+api.route("/", coinSearchController);
 api.route("/", assetController);
 api.route("/", portfolioController);
 

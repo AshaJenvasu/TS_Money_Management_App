@@ -41,14 +41,20 @@ export class PortfolioService {
       throw new Error("PORTFOLIO_NOT_FOUND");
     }
 
-    // ขอราคาตลาดเฉพาะ crypto holding
-    const cryptoSymbols = portfolio.holdings
-      .filter((holding) => holding.asset.assetType === "crypto")
-      .map((holding) => holding.asset.symbol.toUpperCase());
+    // ขอราคาตลาดเฉพาะ crypto holding ที่มี CoinGecko id (จับคู่ด้วย id ไม่ใช่ symbol เพราะ symbol ซ้ำกันได้)
+    const coinIds = [
+      ...new Set(
+        portfolio.holdings.flatMap((holding) =>
+          holding.asset.assetType === "crypto" && holding.asset.coingeckoId
+            ? [holding.asset.coingeckoId]
+            : [],
+        ),
+      ),
+    ];
     // ราคาเป็นข้อมูลเสริม: ถ้าดึงไม่ได้ (CoinGecko/Redis ล้ม) ให้ตอบพอร์ตต่อโดยไม่มีราคา แทนที่จะ error 500
     let prices = new Map<string, number>();
     try {
-      prices = await priceProvider.getPrices(cryptoSymbols);
+      prices = await priceProvider.getPrices(coinIds);
     } catch (error) {
       logger.warn({ err: error }, "Failed to fetch crypto prices");
     }
@@ -57,7 +63,10 @@ export class PortfolioService {
       id: portfolio.id.toString(),
       userId: portfolio.userId.toString(),
       holdings: portfolio.holdings.map((holding) => {
-        const price = prices.get(holding.asset.symbol.toUpperCase());
+        const price =
+          holding.asset.assetType === "crypto" && holding.asset.coingeckoId
+            ? prices.get(holding.asset.coingeckoId)
+            : undefined;
 
         return {
           id: holding.id.toString(),

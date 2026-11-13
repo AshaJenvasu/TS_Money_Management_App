@@ -9,8 +9,17 @@ export interface Asset {
   name: string;
   symbol: string;
   asset_type: AssetType;
+  // CoinGecko coin id ใช้ขอราคา (null สำหรับหุ้น หรือ crypto เดิมที่สร้างก่อนมี field นี้)
+  coingecko_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// ผลการค้นหาเหรียญจาก GET /assets/search-coins
+export interface CoinSearchResult {
+  id: string;
+  symbol: string;
+  name: string;
 }
 
 // สรุปยอดถือครองปัจจุบันของ Asset หนึ่งตัว
@@ -24,6 +33,8 @@ export interface CreateAssetPayload {
   symbol: string;
   name: string;
   asset_type: AssetType;
+  // บังคับเมื่อ asset_type เป็น crypto (เลือกจากผลค้นหาเหรียญ)
+  coingecko_id?: string;
 }
 
 // แก้ไขได้เฉพาะชื่อ symbol และ asset_type แก้ไม่ได้หลังสร้างแล้ว
@@ -35,6 +46,14 @@ export const assetService = {
   // ดึงรายการ Asset ทั้งหมดของผู้ใช้ที่ login อยู่
   getAssets: async (): Promise<Asset[]> => {
     const response = await api.get<Asset[]>("/assets");
+    return response.data;
+  },
+
+  // ค้นหาเหรียญจาก CoinGecko ผ่าน backend เพื่อให้ผู้ใช้เลือกเหรียญที่ถูกต้อง
+  searchCoins: async (q: string): Promise<CoinSearchResult[]> => {
+    const response = await api.get<CoinSearchResult[]>("/assets/search-coins", {
+      params: { q },
+    });
     return response.data;
   },
 

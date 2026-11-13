@@ -11,7 +11,12 @@ export class AssetService {
   // 2. Service: createAsset
   static async createAsset(
     userId: bigint,
-    data: { symbol: string; name: string; assetType: AssetType },
+    data: {
+      symbol: string;
+      name: string;
+      assetType: AssetType;
+      coingeckoId?: string | null;
+    },
   ) {
     try {
       const asset = await AssetRepository.create({
@@ -19,6 +24,7 @@ export class AssetService {
         symbol: data.symbol,
         name: data.name,
         assetType: data.assetType,
+        coingeckoId: data.coingeckoId ?? null,
       });
 
       return asset;

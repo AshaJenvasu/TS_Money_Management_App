@@ -100,6 +100,8 @@ model Asset {
   name      String    @db.VarChar(100)
   symbol    String    @db.VarChar(10)
   assetType AssetType @map("asset_type")
+  // CoinGecko coin id (เช่น "bitcoin") ใช้ขอราคาแทน symbol ที่ซ้ำกันได้ บังคับเมื่อเป็น crypto (ตรวจที่ schema ของ API)
+  coingeckoId String?   @map("coingecko_id") @db.VarChar(100)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp
   updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp
 

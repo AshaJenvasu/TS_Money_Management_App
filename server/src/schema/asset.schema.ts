@@ -4,11 +4,29 @@ import { z } from "@hono/zod-openapi";
 export const AssetTypeSchema = z.enum(["crypto", "stock"]);
 
 // 1. Schema สำหรับ Body ตอนสร้าง Asset (POST /assets)
-export const CreateAssetBodySchema = z.object({
-  symbol: z.string().min(1).max(10).openapi({ example: "BTC" }),
-  name: z.string().min(1).max(100).openapi({ example: "Bitcoin" }),
-  asset_type: AssetTypeSchema.openapi({ example: "crypto" }),
-});
+export const CreateAssetBodySchema = z
+  .object({
+    // symbol เป็นแค่ชื่อแสดงผล รับเฉพาะ A-Z a-z 0-9 (ไม่รับ comma/ช่องว่าง ที่เสี่ยงปนค่าตอนส่งต่อ)
+    symbol: z
+      .string()
+      .regex(/^[A-Za-z0-9]{1,10}$/, "symbol must be 1-10 letters or digits")
+      .openapi({ example: "BTC" }),
+    name: z.string().min(1).max(100).openapi({ example: "Bitcoin" }),
+    asset_type: AssetTypeSchema.openapi({ example: "crypto" }),
+    coingecko_id: z
+      .string()
+      .min(1)
+      .max(100)
+      .optional()
+      .openapi({
+        example: "bitcoin",
+        description: "CoinGecko coin id (ได้จาก GET /assets/search-coins) บังคับเมื่อ asset_type เป็น crypto",
+      }),
+  })
+  .refine((body) => body.asset_type !== "crypto" || !!body.coingecko_id, {
+    message: "coingecko_id is required for crypto assets",
+    path: ["coingecko_id"],
+  });
 
 // 2. Schema สำหรับ Body ตอนอัปเดต Asset (PUT /assets/:id)
 export const UpdateAssetBodySchema = z.object({
@@ -27,6 +45,7 @@ export const AssetResponseSchema = z.object({
   name: z.string(),
   symbol: z.string(),
   asset_type: AssetTypeSchema,
+  coingecko_id: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
 });

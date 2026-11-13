@@ -53,6 +53,7 @@ assetController.openapi(getAssetsRoute, async (c) => {
     name: asset.name,
     symbol: asset.symbol,
     asset_type: asset.assetType,
+    coingecko_id: asset.coingeckoId,
     created_at: asset.createdAt.toISOString(),
     updated_at: asset.updatedAt.toISOString(),
   }));
@@ -100,6 +101,7 @@ assetController.openapi(createAssetRoute, async (c) => {
       symbol: body.symbol,
       name: body.name,
       assetType: body.asset_type as AssetType,
+      coingeckoId: body.coingecko_id ?? null,
     });
 
     return c.json(
@@ -109,6 +111,7 @@ assetController.openapi(createAssetRoute, async (c) => {
         name: createdAsset.name,
         symbol: createdAsset.symbol,
         asset_type: createdAsset.assetType,
+        coingecko_id: createdAsset.coingeckoId,
         created_at: createdAsset.createdAt.toISOString(),
         updated_at: createdAsset.updatedAt.toISOString(),
       },
@@ -182,6 +185,7 @@ assetController.openapi(updateAssetRoute, async (c) => {
         name: updatedAsset.name,
         symbol: updatedAsset.symbol,
         asset_type: updatedAsset.assetType,
+        coingecko_id: updatedAsset.coingeckoId,
         created_at: updatedAsset.createdAt.toISOString(),
         updated_at: updatedAsset.updatedAt.toISOString(),
       },

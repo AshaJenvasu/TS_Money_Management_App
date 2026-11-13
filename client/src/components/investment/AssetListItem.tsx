@@ -1,6 +1,7 @@
 import { ChevronDown, Coins, TrendingUp, Pencil, Trash2 } from "lucide-react";
 import type { AssetView } from "../../types/investment";
 import { formatCurrency } from "../../utils/formatCurrency";
+import { PnlText } from "./PnlText";
 
 const ASSET_TYPE_LABEL: Record<string, string> = {
   crypto: "คริปโต",
@@ -100,6 +101,39 @@ export function AssetListItem({
           </dd>
         </div>
       </dl>
+
+      {view.quantity > 0 && (
+        <div className="mt-3 rounded-xl bg-[#F3F5FD] px-3 py-2 text-xs">
+          {view.currentValue !== null && view.unrealizedPnl !== null ? (
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] text-[#5C6899]">
+                  มูลค่าปัจจุบัน
+                  {view.currentPrice !== null &&
+                    ` (฿${formatCurrency(view.currentPrice)}/หน่วย)`}
+                </p>
+                <p className="mt-0.5 text-sm font-bold">
+                  ฿{formatCurrency(view.currentValue)}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[11px] text-[#5C6899]">กำไร/ขาดทุน</p>
+                <PnlText
+                  pnl={view.unrealizedPnl}
+                  percent={view.unrealizedPnlPercent}
+                  className="mt-0.5 block text-sm font-bold"
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="text-[#5C6899]">
+              {view.priceUnavailable
+                ? "ราคาไม่พร้อมใช้งาน"
+                : "ยังไม่มีข้อมูลราคาปัจจุบัน"}
+            </p>
+          )}
+        </div>
+      )}
 
       <button
         type="button"

@@ -1,6 +1,6 @@
 # 02 — Frontend: แสดง current price / value / unrealized P&L ในหน้า Investment
 
-**Status:** blocked (รอ ticket 01)
+**Status:** implemented (รอทดสอบบนเบราว์เซอร์)
 **Depends on:** 01
 **Parallel with:** 03
 **ADR:** `docs/adr/ADR-0001-realtime-crypto-price-caching.md`

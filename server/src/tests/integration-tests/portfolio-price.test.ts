@@ -32,20 +32,26 @@ const fakeRedis = vi.hoisted(() => {
 
 vi.mock("../../config/redis", () => ({ redis: fakeRedis.client }));
 
-// CoinGecko เป็น external boundary: stub global fetch (GET /coins/markets คืน array ที่มี symbol + current_price)
+// CoinGecko เป็น external boundary: stub global fetch (GET /coins/markets?ids=... คืน array ของเหรียญที่ขอและมีอยู่จริง)
+// ทุกเหรียญใช้ symbol "btc" เหมือนกันโดยตั้งใจ เพื่อพิสูจน์ว่าโค้ดจับคู่ด้วย id ไม่ใช่ symbol
 const coingeckoFetch = vi.fn();
 
-function stubCoinGeckoPrices(prices: Record<string, number>) {
+function stubCoinGeckoPrices(pricesById: Record<string, number>) {
   coingeckoFetch.mockImplementation(async (input: unknown) => {
     const url = String(input);
     if (!url.includes("coingecko")) {
       throw new Error(`Unexpected fetch in test: ${url}`);
     }
-    const body = Object.entries(prices).map(([symbol, price]) => ({
-      id: symbol,
-      symbol: symbol.toLowerCase(),
-      current_price: price,
-    }));
+    const requestedIds = (new URL(url).searchParams.get("ids") ?? "")
+      .split(",")
+      .filter(Boolean);
+    const body = requestedIds
+      .filter((id) => id in pricesById)
+      .map((id) => ({
+        id,
+        symbol: "btc",
+        current_price: pricesById[id],
+      }));
     return new Response(JSON.stringify(body), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -59,6 +65,7 @@ async function createPortfolioWithHolding(
     symbol: string;
     name: string;
     assetType: "crypto" | "stock";
+    coingeckoId?: string;
     quantity: string;
     avgCostPerUnit: string;
   },
@@ -70,6 +77,7 @@ async function createPortfolioWithHolding(
       symbol: holding.symbol,
       name: holding.name,
       assetType: holding.assetType,
+      coingeckoId: holding.coingeckoId,
     },
   });
   await prisma.assetHolding.create({
@@ -101,10 +109,11 @@ describe("GET /api/v1/portfolio - real-time crypto price", () => {
       symbol: "BTC",
       name: "[TEST] Bitcoin",
       assetType: "crypto",
+      coingeckoId: "bitcoin",
       quantity: "0.5",
       avgCostPerUnit: "60000",
     });
-    stubCoinGeckoPrices({ BTC: 72000 });
+    stubCoinGeckoPrices({ bitcoin: 72000 });
 
     // Act
     const res = await app.request("/api/v1/portfolio", {
@@ -131,10 +140,11 @@ describe("GET /api/v1/portfolio - real-time crypto price", () => {
       symbol: "BTC",
       name: "[TEST] Bitcoin",
       assetType: "crypto",
+      coingeckoId: "bitcoin",
       quantity: "0.5",
       avgCostPerUnit: "60000",
     });
-    stubCoinGeckoPrices({ BTC: 72000 });
+    stubCoinGeckoPrices({ bitcoin: 72000 });
 
     // Act: ยิงสองครั้งติดกัน (ยังไม่หมด TTL)
     const firstRes = await app.request("/api/v1/portfolio", {
@@ -161,6 +171,7 @@ describe("GET /api/v1/portfolio - real-time crypto price", () => {
       symbol: "BTC",
       name: "[TEST] Bitcoin",
       assetType: "crypto",
+      coingeckoId: "bitcoin",
       quantity: "0.5",
       avgCostPerUnit: "60000",
     });
@@ -171,13 +182,13 @@ describe("GET /api/v1/portfolio - real-time crypto price", () => {
       });
 
     // Act 1: ยิงครั้งแรก ได้ราคา 72,000 และถูก cache
-    stubCoinGeckoPrices({ BTC: 72000 });
+    stubCoinGeckoPrices({ bitcoin: 72000 });
     await getPortfolio();
 
     // Act 2: เลื่อนเวลาไป 10 นาที (เกิน TTL สูงสุด 5 นาที) แล้วราคาตลาดเปลี่ยนเป็น 80,000
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(Date.now() + 10 * 60 * 1000);
-    stubCoinGeckoPrices({ BTC: 80000 });
+    stubCoinGeckoPrices({ bitcoin: 80000 });
     const expiredRes = await getPortfolio();
     const expiredBody = await expiredRes.json();
 
@@ -203,7 +214,7 @@ describe("GET /api/v1/portfolio - real-time crypto price", () => {
       quantity: "10",
       avgCostPerUnit: "100",
     });
-    stubCoinGeckoPrices({ BTC: 72000 });
+    stubCoinGeckoPrices({ bitcoin: 72000 });
 
     // Act
     const res = await app.request("/api/v1/portfolio", {
@@ -221,6 +232,97 @@ describe("GET /api/v1/portfolio - real-time crypto price", () => {
     expect(holding.unrealizedPnlPercent).toBeNull();
     expect(holding.priceUnavailable).toBe(true);
     expect(coingeckoFetch).not.toHaveBeenCalled();
+  });
+
+  test("🟢 Asset identity: should price by CoinGecko id, not by ticker symbol, when symbols collide", async () => {
+    // Arrange: เหรียญเล็กใช้ symbol "BTC" เหมือน Bitcoin แต่มี CoinGecko id ของตัวเอง
+    const { testUser, authHeader } = await createTestUserWithToken();
+    await createPortfolioWithHolding(testUser.id, {
+      symbol: "BTC",
+      name: "[TEST] Fake BTC Token",
+      assetType: "crypto",
+      coingeckoId: "fake-btc-token",
+      quantity: "10",
+      avgCostPerUnit: "1",
+    });
+    stubCoinGeckoPrices({ bitcoin: 72000, "fake-btc-token": 5 });
+
+    // Act
+    const res = await app.request("/api/v1/portfolio", {
+      method: "GET",
+      headers: { ...authHeader },
+    });
+    const body = await res.json();
+
+    // Assert: ต้องได้ราคาของ fake-btc-token (5) ไม่ใช่ของ Bitcoin (72,000)
+    expect(res.status).toBe(200);
+    expect(Number(body.holdings[0].currentPrice)).toBe(5);
+    expect(String(coingeckoFetch.mock.calls[0][0])).toContain(
+      "ids=fake-btc-token",
+    );
+  });
+
+  test("🟢 Legacy crypto asset without coingecko id: should return null price without calling CoinGecko", async () => {
+    // Arrange: asset crypto ที่สร้างก่อนมี coingeckoId (coingeckoId เป็น null)
+    const { testUser, authHeader } = await createTestUserWithToken();
+    await createPortfolioWithHolding(testUser.id, {
+      symbol: "BTC",
+      name: "[TEST] Legacy Bitcoin",
+      assetType: "crypto",
+      quantity: "1",
+      avgCostPerUnit: "60000",
+    });
+    stubCoinGeckoPrices({ bitcoin: 72000 });
+
+    // Act
+    const res = await app.request("/api/v1/portfolio", {
+      method: "GET",
+      headers: { ...authHeader },
+    });
+    const body = await res.json();
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(body.holdings[0].currentPrice).toBeNull();
+    expect(body.holdings[0].priceUnavailable).toBe(true);
+    expect(coingeckoFetch).not.toHaveBeenCalled();
+  });
+
+  test("🟢 Not found: should cache a missing coin briefly so CoinGecko is not hit on every request", async () => {
+    // Arrange: เหรียญที่ CoinGecko ไม่รู้จักแล้ว (เช่นถูก delist)
+    const { testUser, authHeader } = await createTestUserWithToken();
+    await createPortfolioWithHolding(testUser.id, {
+      symbol: "OLD",
+      name: "[TEST] Delisted Coin",
+      assetType: "crypto",
+      coingeckoId: "delisted-coin",
+      quantity: "1",
+      avgCostPerUnit: "100",
+    });
+    stubCoinGeckoPrices({ bitcoin: 72000 });
+    const getPortfolio = () =>
+      app.request("/api/v1/portfolio", {
+        method: "GET",
+        headers: { ...authHeader },
+      });
+
+    // Act 1-2: ยิงสองครั้งติดกัน
+    const firstBody = await (await getPortfolio()).json();
+    const secondBody = await (await getPortfolio()).json();
+
+    // Assert: ได้ราคา null ทั้งคู่ แต่ CoinGecko ถูกเรียกครั้งเดียว
+    expect(firstBody.holdings[0].priceUnavailable).toBe(true);
+    expect(secondBody.holdings[0].priceUnavailable).toBe(true);
+    expect(coingeckoFetch).toHaveBeenCalledTimes(1);
+
+    // Act 3: เลื่อนเวลา 10 นาที (เกิน TTL ของผล "ไม่เจอ") แล้วต้องลองถามใหม่ เผื่อกลับมามีราคา
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + 10 * 60 * 1000);
+    stubCoinGeckoPrices({ bitcoin: 72000, "delisted-coin": 7 });
+    const thirdBody = await (await getPortfolio()).json();
+
+    expect(coingeckoFetch).toHaveBeenCalledTimes(2);
+    expect(Number(thirdBody.holdings[0].currentPrice)).toBe(7);
   });
 
   describe("🔴 AC4 CoinGecko fails and no cached price", () => {
@@ -250,6 +352,7 @@ describe("GET /api/v1/portfolio - real-time crypto price", () => {
           symbol: "BTC",
           name: "[TEST] Bitcoin",
           assetType: "crypto",
+          coingeckoId: "bitcoin",
           quantity: "0.5",
           avgCostPerUnit: "60000",
         });
