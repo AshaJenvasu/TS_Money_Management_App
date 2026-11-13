@@ -93,3 +93,11 @@
 - ticket 01 งานเพิ่ม: symbol ต้องตรง `^[A-Za-z0-9]{1,10}$` (test 3 กรณี), cache ผล "ไม่เจอ" 5 นาที (`NOT_FOUND_MARKER` ใน `price.provider.ts`) — `portfolio-price.test.ts` ผ่าน 9/9, `asset-create.test.ts` 6/6, `asset-search-coins.test.ts` 6/6 (รันทีละไฟล์)
 - ยังเหลือ: ทดสอบหน้า Investment บนเบราว์เซอร์จริง (ต้องตั้ง `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`), ticket 03 (rate limit `/auth/forgot-password`), Quality Gate (grill-me, regression ทั้งหมด, E2E Playwright, code review, security review)
 - ข้อสังเกต: asset crypto ที่สร้างก่อนมี `coingecko_id` จะได้ราคา null จนกว่าจะสร้างใหม่ (ยังไม่มี flow แก้ id ให้ asset เดิม: `PUT /assets/:id` แก้ได้แค่ชื่อ)
+
+## อัปเดต ticket 03 (2026-11-13) — rate limit ต่อ IP เสร็จ
+- โค้ด: `server/src/middlewares/rate-limit.middleware.ts` (`ipRateLimit`: fixed window ด้วย Redis `incr` + `expire(..., "NX")`), `server/src/config/rate-limits.ts` (3 ครั้ง / 15 นาที ต่อ IP แก้ที่นี่ที่เดียว), ผูกที่ `auth.controllers.ts` ก่อน route `/auth/forgot-password`
+- ตัดสินใจ (ผมเลือกค่า Recommended ให้เองเพราะผู้ใช้ปิดหน้าต่างคำถาม ถ้าไม่เห็นด้วยแก้ได้): **fail-open** เมื่อ Redis ล่ม และอ่าน IP จาก **ค่าซ้ายสุดของ `x-forwarded-for`** (fallback `x-real-ip`; ถ้าไม่มีทั้งสองข้ามด่านนี้)
+- ข้อควรระวัง: ค่าซ้ายสุดผู้ใช้ปลอม header เองเพื่อเลี่ยง limit ได้ (ยังมี limit ต่อ email ใน DB 3 ครั้ง/15 นาทีเป็นด่านสอง); ยังไม่ได้ตรวจว่า Render มี proxy กี่ชั้น; ถ้าอ่าน IP ไม่ได้ (ไม่มีทั้ง `x-forwarded-for` และ `x-real-ip`) จะ fail-open: ข้าม limit ของ request นั้นและ log warning (แก้เมื่อ 2026-11-13 ตามที่ผู้ใช้สั่ง; test 5/5)
+- test `forgot-password-rate-limit.test.ts` ผ่าน 4/4: 3 ครั้งแรก 200 / ครั้งที่ 4 เป็น 429 และไม่ส่งอีเมล, IP อื่นไม่นับรวม, หมด 15 นาทีใช้ได้อีก, Redis ล่มยังผ่าน (mutation check แล้ว)
+- ยังไม่ได้ test: ค่า config โดยตรง (ตรวจผ่านพฤติกรรมของค่าเริ่มต้น 3/15 นาที)
+- ถัดไป: ทดสอบบนเบราว์เซอร์/Scalar, Quality Gate (grill-me, regression ทั้งหมด, E2E Playwright, code review, security review), commit

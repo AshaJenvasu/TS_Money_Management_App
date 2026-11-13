@@ -1,6 +1,6 @@
 # 03 — Backend: per-IP rate limiting บน /auth/forgot-password
 
-**Status:** blocked (รอ Upstash client จาก ticket 01)
+**Status:** implemented (test ผ่าน 4/4)
 **Depends on:** 01 (เฉพาะ Upstash client)
 **Parallel with:** 02
 **ADR:** `docs/adr/ADR-0001-realtime-crypto-price-caching.md` (ข้อ 5)

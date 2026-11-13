@@ -13,8 +13,16 @@ import {
   ResetPasswordBodySchema,
 } from "../schema/auth.schema.js";
 import { z } from "zod";
+import { ipRateLimit } from "../middlewares/rate-limit.middleware.js";
+import { RATE_LIMITS } from "../config/rate-limits.js";
 
 export const authController = new OpenAPIHono();
+
+// จำกัดจำนวนคำขอ reset password ต่อ IP (ต้องลงทะเบียนก่อน route ของ /auth/forgot-password)
+authController.use(
+  "/auth/forgot-password",
+  ipRateLimit(RATE_LIMITS.forgotPassword),
+);
 
 //  OpenAPI Route Specification
 export const registerRoute = createRoute({
