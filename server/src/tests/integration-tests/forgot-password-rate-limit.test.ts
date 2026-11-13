@@ -2,49 +2,12 @@ import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import app from "../../index";
 import { createTestUserWithToken } from "../helpers/auth";
 import { sendPasswordResetEmail } from "../../utils/email";
+import { fakeRedis } from "../helpers/fake-redis";
 
-// Redis (Upstash) เป็น external boundary: in-memory fake ที่รองรับ incr และ expire (รวม option NX) ตามเวลาจริงของ Date.now
-const fakeRedis = vi.hoisted(() => {
-  const store = new Map<string, { value: number; expiresAt: number | null }>();
-  const state = { failing: false };
-
-  const readLive = (key: string) => {
-    const entry = store.get(key);
-    if (!entry) return undefined;
-    if (entry.expiresAt !== null && Date.now() >= entry.expiresAt) {
-      store.delete(key);
-      return undefined;
-    }
-    return entry;
-  };
-
-  return {
-    store,
-    state,
-    client: {
-      async incr(key: string) {
-        if (state.failing) throw new Error("redis down");
-        const entry = readLive(key);
-        if (!entry) {
-          store.set(key, { value: 1, expiresAt: null });
-          return 1;
-        }
-        entry.value += 1;
-        return entry.value;
-      },
-      async expire(key: string, seconds: number, option?: "NX") {
-        if (state.failing) throw new Error("redis down");
-        const entry = readLive(key);
-        if (!entry) return 0;
-        if (option === "NX" && entry.expiresAt !== null) return 0;
-        entry.expiresAt = Date.now() + seconds * 1000;
-        return 1;
-      },
-    },
-  };
-});
-
-vi.mock("../../config/redis", () => ({ redis: fakeRedis.client }));
+// Redis (Upstash) เป็น external boundary: ใช้ in-memory fake ร่วมกับ test อื่น (helpers/fake-redis.ts)
+vi.mock("../../config/redis", async () => ({
+  redis: (await import("../helpers/fake-redis")).fakeRedis.client,
+}));
 
 // การส่งอีเมลเป็น external boundary: ไม่ส่งจริง แค่นับว่าถูกเรียกกี่ครั้ง
 vi.mock("../../utils/email", () => ({
@@ -77,8 +40,7 @@ async function createUsersWithEmails(count: number) {
 
 describe("POST /api/v1/auth/forgot-password - per-IP rate limit", () => {
   beforeEach(() => {
-    fakeRedis.store.clear();
-    fakeRedis.state.failing = false;
+    fakeRedis.reset();
     vi.mocked(sendPasswordResetEmail).mockClear();
   });
 
@@ -98,6 +60,19 @@ describe("POST /api/v1/auth/forgot-password - per-IP rate limit", () => {
 
     // Assert: 3 ครั้งแรกผ่าน ครั้งที่ 4 โดนบล็อกและไม่มีอีเมลครั้งที่ 4
     expect(statuses).toEqual([200, 200, 200, 429]);
+    expect(sendPasswordResetEmail).toHaveBeenCalledTimes(3);
+  });
+
+  test("🟢 Concurrency: 6 simultaneous requests from one IP must let through exactly 3 (limit 3), never more", async () => {
+    const emails = await createUsersWithEmails(6);
+
+    const responses = await Promise.all(
+      emails.map((email) => requestReset(email, "203.0.113.77")),
+    );
+    const statuses = responses.map((res) => res.status);
+
+    expect(statuses.filter((s) => s === 200)).toHaveLength(3);
+    expect(statuses.filter((s) => s === 429)).toHaveLength(3);
     expect(sendPasswordResetEmail).toHaveBeenCalledTimes(3);
   });
 
@@ -147,7 +122,7 @@ describe("POST /api/v1/auth/forgot-password - per-IP rate limit", () => {
 
   test("🔴 should fail open when Redis is unavailable", async () => {
     const [email] = await createUsersWithEmails(1);
-    fakeRedis.state.failing = true;
+    fakeRedis.failing = true;
 
     const res = await requestReset(email, "203.0.113.1");
 

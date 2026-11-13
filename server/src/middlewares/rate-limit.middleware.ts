@@ -7,6 +7,8 @@ export interface IpRateLimitOptions {
   name: string;
   maxRequests: number;
   windowSeconds: number;
+  // ข้อความที่ตอบกลับเมื่อโดน 429
+  message: string;
 }
 
 // อ่าน IP ของผู้ใช้หลัง proxy (Render) จากค่าซ้ายสุดของ x-forwarded-for
@@ -46,10 +48,13 @@ export const ipRateLimit = (options: IpRateLimitOptions) =>
       await redis.expire(key, options.windowSeconds, "NX");
 
       if (count > options.maxRequests) {
-        return c.json(
-          { message: "ขอ reset password บ่อยเกินไป กรุณาลองใหม่ภายหลัง" },
-          429,
+        // บอกวินาทีที่ต้องรอจากอายุที่เหลือของตัวนับ (ถ้าอ่านไม่ได้ใช้ทั้งหน้าต่าง)
+        const ttl = await redis.ttl(key).catch(() => -1);
+        c.header(
+          "Retry-After",
+          String(ttl > 0 ? ttl : options.windowSeconds),
         );
+        return c.json({ message: options.message }, 429);
       }
     } catch (error) {
       // Fail-open: Redis ล่มต้องไม่ทำให้ผู้ใช้ทุกคนใช้งานไม่ได้ (ยังมี limit ต่อ email ใน DB เป็นด่านสอง)

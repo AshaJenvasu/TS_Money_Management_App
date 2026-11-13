@@ -15,8 +15,12 @@ import {
 import { z } from "zod";
 import { ipRateLimit } from "../middlewares/rate-limit.middleware.js";
 import { RATE_LIMITS } from "../config/rate-limits.js";
+import { LoginThrottle } from "../services/login-throttle.js";
 
 export const authController = new OpenAPIHono();
+
+// ชั้นที่ 1 ของ login rate limit: จำกัดต่อ IP นับทุก request (ชั้นที่ 2 ต่อ identifier อยู่ใน handler ของ login)
+authController.use("/auth/login", ipRateLimit(RATE_LIMITS.loginIp));
 
 // จำกัดจำนวนคำขอ reset password ต่อ IP (ต้องลงทะเบียนก่อน route ของ /auth/forgot-password)
 authController.use(
@@ -180,8 +184,21 @@ authController.openapi(registerRoute, async (c) => {
 authController.openapi(loginRoute, async (c) => {
   const body = c.req.valid("json");
 
+  // ชั้นที่ 2: จองช่องในตัวนับของบัญชีนี้ก่อนตรวจรหัสผ่านเสมอ (increment-then-check กัน race)
+  // ถ้าเกิน limit จะถูกบล็อกก่อนถึงขั้นตรวจรหัส จึงบล็อกแม้พิมพ์รหัสถูก
+  const ticket = await LoginThrottle.beginAttempt(body.identifier);
+  if (ticket.retryAfterSeconds !== null) {
+    c.header("Retry-After", String(ticket.retryAfterSeconds));
+    return c.json({ message: RATE_LIMITS.loginEmail.message }, 429);
+  }
+
   try {
     const result = await AuthService.login(body);
+
+    // login สำเร็จ: คืนช่องที่จองไว้ ตัวนับจึงเหลือเฉพาะ login ที่ล้มเหลว
+    if (ticket.counted) {
+      await LoginThrottle.release(body.identifier);
+    }
 
     // 🔒 สั่งฝาก Token ลง Cookie
     setCookie(c, "auth_token", result.token, {
@@ -196,7 +213,13 @@ authController.openapi(loginRoute, async (c) => {
     console.error("Login ERROR:", error);
 
     if (error.message === "INVALID_CREDENTIALS") {
+      // credential ผิด: ช่องที่จองไว้ถือเป็นความล้มเหลว 1 ครั้ง จึงไม่คืน (รวม identifier ที่ไม่มีอยู่จริง เพื่อไม่ให้พฤติกรรมต่างกันจนเดาได้ว่าบัญชีมีอยู่)
       return c.json({ message: "Invalid credentials" }, 401);
+    }
+
+    // error อื่น (เช่น DB ล่ม) ไม่ใช่ความผิดของผู้ใช้ จึงคืนช่องก่อน throw ต่อ
+    if (ticket.counted) {
+      await LoginThrottle.release(body.identifier);
     }
     throw error;
   }

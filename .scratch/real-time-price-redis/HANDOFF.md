@@ -101,3 +101,21 @@
 - test `forgot-password-rate-limit.test.ts` ผ่าน 4/4: 3 ครั้งแรก 200 / ครั้งที่ 4 เป็น 429 และไม่ส่งอีเมล, IP อื่นไม่นับรวม, หมด 15 นาทีใช้ได้อีก, Redis ล่มยังผ่าน (mutation check แล้ว)
 - ยังไม่ได้ test: ค่า config โดยตรง (ตรวจผ่านพฤติกรรมของค่าเริ่มต้น 3/15 นาที)
 - ถัดไป: ทดสอบบนเบราว์เซอร์/Scalar, Quality Gate (grill-me, regression ทั้งหมด, E2E Playwright, code review, security review), commit
+
+## อัปเดต ticket 05 (2026-11-13) — login rate limit 2 ชั้น เสร็จ
+- ชั้น IP: `authController.use("/auth/login", ipRateLimit(RATE_LIMITS.loginIp))` 10 ครั้ง/15 นาที/IP นับทุก request (key `ratelimit:login-ip:<ip>`)
+- ชั้น identifier: `server/src/services/login-throttle.ts` (`LoginThrottle.getRetryAfterSeconds` เช็คก่อนตรวจรหัส จึงบล็อกแม้รหัสถูก, `recordFailure` เรียกเฉพาะ branch `INVALID_CREDENTIALS` ใน handler login) 5 ครั้งที่ล้มเหลว/15 นาที ใช้ Redis `incr` + `expire(..., "NX")`; key ใช้ `identifier` ที่ trim + ตัวพิมพ์เล็ก (ระบบ login รับ email หรือ username)
+- 429 ทุกชั้นมี header `Retry-After` (วินาทีที่เหลือจาก `ttl`); `ipRateLimit` รับ `message` จาก config แล้ว (`config/rate-limits.ts` เก็บค่า limit และข้อความทั้งหมด)
+- อ่าน IP ไม่ได้ → fail-open: ทำไปแล้วใน ticket 03 ได้ผลกับ login ด้วย (มี test ฝั่ง login)
+- test: `login-rate-limit.test.ts` ผ่าน 11/11 (ใหม่), `helpers/fake-redis.ts` (ใหม่: get/set/incr/expire NX/ttl + flag `failing`), `forgot-password-rate-limit.test.ts` ย้ายมาใช้ fake กลางนี้ (ผ่าน 5/5); mutation check แล้วสำหรับ "login สำเร็จไม่นับ" และ "Redis ล่ม fail-open"
+- ตรวจแล้ว: ไม่มี test เดิมใดเรียก `/auth/login` จึงไม่มีอะไรโดน rate limit ตัวเอง
+- ข้อควรระวัง: (1) ผู้โจมตีล็อกบัญชีเหยื่อได้ด้วยการจงใจใส่รหัสผิด 5 ครั้ง (trade-off ของ limit ต่อบัญชี) (2) `x-forwarded-for` ค่าซ้ายสุดปลอมได้ ชั้น IP จึงเลี่ยงได้ แต่ชั้น identifier ไม่ขึ้นกับ IP (3) การนับ-เช็คไม่ atomic ยิงขนานพร้อมกันอาจเกิน limit เล็กน้อย (4) login ที่ password สั้นกว่า 6 ตัวติด validation 400 ไม่ถูกนับเป็นความล้มเหลว
+- ยังไม่ได้ทำ: ทดสอบบนเบราว์เซอร์ + frontend แสดงข้อความเมื่อโดน 429 ที่หน้า login (ยังไม่ได้ตรวจว่า LoginForm จัดการ 429 อย่างไร)
+
+## อัปเดต race condition ใน rate limiting (2026-11-13)
+- ตรวจแล้ว: `ipRateLimit` เป็น increment-then-check อยู่แล้ว (ไม่มี race ไม่แก้; เรียก `expire(..., "NX")` ทุกครั้งแทนเฉพาะตอน `newCount === 1` เพื่อให้ตั้งอายุซ้ำได้ถ้าครั้งแรกล้ม) แต่ `LoginThrottle` เป็น check-then-increment จริง (get ก่อนตรวจรหัส incr หลังรหัสผิด) — RED: ยิงรหัสผิดพร้อมกัน 8 ครั้งถูกตรวจรหัสครบ 8 (limit 5)
+- แก้เป็น increment-then-check: `LoginThrottle.beginAttempt` จอง slot ด้วย `incr` ก่อนตรวจรหัสเสมอ เทียบค่าที่คืนกับ limit ทันที; login สำเร็จหรือเกิด error ที่ไม่ใช่รหัสผิด เรียก `release` (`decr`, ลบ key ถ้าติดลบ) คืน slot; รหัสผิดไม่คืน slot (`recordFailure`/`getRetryAfterSeconds` เดิมถูกแทนที่)
+- test ใหม่ (concurrency, `Promise.all`): login identifier 8 ขนาน → 401 เป๊ะ 5 และ 429 เป๊ะ 3; login IP 14 ขนาน → ผ่านเป๊ะ 10; forgot-password 6 ขนาน → ผ่านเป๊ะ 3 (ส่งอีเมล 3 ฉบับ); login: ผิด 4 + สำเร็จ 1 + ผิด 1 ถึงล็อก (พิสูจน์ว่า login สำเร็จไม่ค้างในตัวนับ) — `login-rate-limit` 14/14, `forgot-password-rate-limit` 6/6; mutation check: ทำ `ipRateLimit` เป็น check-then-increment แล้ว test forgot-password ขนานล้ม
+- `helpers/fake-redis.ts` เพิ่ม `decr` และ `del`
+- trade-off: attempt ที่กำลังตรวจรหัสพร้อมกันนับรวมใน limit ชั่วคราว ผู้ใช้จริงที่ login ซ้อน >5 ครั้งพร้อมกันบัญชีเดียวจะโดน 429 (ไม่น่าเกิดในการใช้งานจริง)
+- ยังไม่มี test: กรณี key หมดอายุระหว่าง attempt แล้ว `release` (โค้ดกันค่าติดลบไว้แล้วแต่ยังไม่ได้พิสูจน์ด้วย test)
