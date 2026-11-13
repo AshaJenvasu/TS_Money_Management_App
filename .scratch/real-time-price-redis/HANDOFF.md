@@ -30,6 +30,24 @@
 - ข้อควรระวัง: รัน integration test หลายไฟล์พร้อมกันจะชนกันเพราะแชร์ DB และ `cleanTestData` (เคยเจอ PrismaClientKnownRequestError) ให้รันทีละไฟล์; `wallets.test.ts` ล้ม 3/23 เมื่อรันเดี่ยว (เป็นของเดิม ยังไม่ได้ตรวจสาเหตุ)
 - ถัดไป: AC2 (cache hit) — เขียน test แดงก่อน แล้วสร้าง `src/config/redis.ts` + cache-aside ใน provider
 
+## อัปเดต AC2 (2026-11-13)
+- AC2 RED → GREEN เสร็จ (`portfolio-price.test.ts` ผ่าน 2/2) เพิ่ม `server/src/config/redis.ts` (`Redis.fromEnv()`) และ `CachedPriceProvider` ใน `price.provider.ts` (key `price:usd:<SYMBOL>`, TTL 120 วินาที, cache รายตัว)
+- `portfolio.services.ts` ใช้ `new CachedPriceProvider(new CoinGeckoPriceProvider())`
+- ต้องตั้ง `UPSTASH_REDIS_REST_URL` และ `UPSTASH_REDIS_REST_TOKEN` ใน `server/.env` (ตอนนี้ยังไม่มี: import แล้วขึ้น warning ไม่ throw แต่เรียกจริงจะ error → AC4 ต้องรองรับกรณี Redis/CoinGecko ล้ม)
+- `wallets.test.ts` ยังล้ม 3/23 เท่าเดิม ไม่ได้ผลจากงานนี้
+- ถัดไป: AC3 (cache miss/expired → refetch และ TTL ใหม่)
+
+## อัปเดต AC3 (2026-11-13)
+- AC3 เสร็จ: test ผ่านทันทีโดยไม่ต้องเพิ่มโค้ด (cache-aside จาก AC2 ครอบคลุม) ตรวจแล้วด้วย mutation check: ลบ TTL ออกชั่วคราว test ล้ม (`expected 72000 to be 80000`) แล้วคืนโค้ดเดิม ผ่าน 3/3
+- test ใช้ `vi.useFakeTimers({ toFake: ["Date"] })` เลื่อนเวลา 10 นาที; `afterEach` เรียก `vi.useRealTimers()`
+- ถัดไป: AC4 (CoinGecko/Redis ล้มและไม่มี cache → 200, `currentPrice: null`, `priceUnavailable: true`) ซึ่งจะต้องแก้โค้ดจริง
+
+## อัปเดต AC4 (2026-11-13)
+- AC4 RED → GREEN เสร็จ (`portfolio-price.test.ts` ผ่าน 5/5): test 2 กรณี (fetch reject, HTTP 429) เดิมแดงที่ `expected 500 to be 200`
+- โค้ด: `getPortfolio` ครอบ `priceProvider.getPrices` ด้วย try/catch (log ผ่าน `logger.warn`, ใช้ Map ว่างต่อ → `currentPrice: null`, `priceUnavailable: true`); `CoinGeckoPriceProvider` throw เมื่อ `!response.ok` และตั้ง timeout 5 วินาทีด้วย `AbortSignal.timeout` (ส่วน timeout จริงยังไม่มี test ตรง ๆ test จำลองด้วย fetch reject)
+- try/catch ครอบ Redis ล้มด้วย (ยังไม่มี test แยกสำหรับ Redis error)
+- ถัดไป: AC5 (stock → null/`priceUnavailable: true`)
+
 ## ขั้นตอนเดิม (ข้อ 1-4 เสร็จแล้ว)
 1. เปิด Docker Desktop แล้วรัน `docker compose up -d postgres` ใน `server/`
 2. รัน `npx vitest run src/tests/integration-tests/wallets.test.ts` ยืนยันว่า DB ใช้ได้ (ต้องเขียวเหมือนเดิม)

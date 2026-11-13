@@ -90,6 +90,7 @@ describe("GET /api/v1/portfolio - real-time crypto price", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -121,5 +122,127 @@ describe("GET /api/v1/portfolio - real-time crypto price", () => {
     expect(Number(holding.unrealizedPnl)).toBe(6000);
     expect(Number(holding.unrealizedPnlPercent)).toBe(20);
     expect(holding.priceUnavailable).toBe(false);
+  });
+
+  test("🟢 AC2 Cache Hit: second request within TTL should use cached price without calling CoinGecko again", async () => {
+    // Arrange
+    const { testUser, authHeader } = await createTestUserWithToken();
+    await createPortfolioWithHolding(testUser.id, {
+      symbol: "BTC",
+      name: "[TEST] Bitcoin",
+      assetType: "crypto",
+      quantity: "0.5",
+      avgCostPerUnit: "60000",
+    });
+    stubCoinGeckoPrices({ BTC: 72000 });
+
+    // Act: ยิงสองครั้งติดกัน (ยังไม่หมด TTL)
+    const firstRes = await app.request("/api/v1/portfolio", {
+      method: "GET",
+      headers: { ...authHeader },
+    });
+    const secondRes = await app.request("/api/v1/portfolio", {
+      method: "GET",
+      headers: { ...authHeader },
+    });
+    const secondBody = await secondRes.json();
+
+    // Assert: ทั้งสองครั้งได้ราคาเดียวกัน แต่ CoinGecko ถูกเรียกแค่ครั้งเดียว
+    expect(firstRes.status).toBe(200);
+    expect(secondRes.status).toBe(200);
+    expect(Number(secondBody.holdings[0].currentPrice)).toBe(72000);
+    expect(coingeckoFetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("🟢 AC3 Cache Expired: should refetch from CoinGecko after TTL and cache the new price with a fresh TTL", async () => {
+    // Arrange
+    const { testUser, authHeader } = await createTestUserWithToken();
+    await createPortfolioWithHolding(testUser.id, {
+      symbol: "BTC",
+      name: "[TEST] Bitcoin",
+      assetType: "crypto",
+      quantity: "0.5",
+      avgCostPerUnit: "60000",
+    });
+    const getPortfolio = () =>
+      app.request("/api/v1/portfolio", {
+        method: "GET",
+        headers: { ...authHeader },
+      });
+
+    // Act 1: ยิงครั้งแรก ได้ราคา 72,000 และถูก cache
+    stubCoinGeckoPrices({ BTC: 72000 });
+    await getPortfolio();
+
+    // Act 2: เลื่อนเวลาไป 10 นาที (เกิน TTL สูงสุด 5 นาที) แล้วราคาตลาดเปลี่ยนเป็น 80,000
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + 10 * 60 * 1000);
+    stubCoinGeckoPrices({ BTC: 80000 });
+    const expiredRes = await getPortfolio();
+    const expiredBody = await expiredRes.json();
+
+    // Assert: cache หมดอายุ จึงยิง CoinGecko ใหม่และได้ราคาใหม่
+    expect(expiredRes.status).toBe(200);
+    expect(Number(expiredBody.holdings[0].currentPrice)).toBe(80000);
+    expect(coingeckoFetch).toHaveBeenCalledTimes(2);
+
+    // Act 3: ยิงอีกครั้งทันที ต้องใช้ราคาใหม่จาก cache (TTL ใหม่) ไม่ยิง CoinGecko อีก
+    const freshRes = await getPortfolio();
+    const freshBody = await freshRes.json();
+    expect(Number(freshBody.holdings[0].currentPrice)).toBe(80000);
+    expect(coingeckoFetch).toHaveBeenCalledTimes(2);
+  });
+
+  describe("🔴 AC4 CoinGecko fails and no cached price", () => {
+    const failureModes: Array<[string, () => void]> = [
+      [
+        "network error / timeout",
+        () => coingeckoFetch.mockRejectedValue(new Error("network down")),
+      ],
+      [
+        "rate limited (HTTP 429)",
+        () =>
+          coingeckoFetch.mockResolvedValue(
+            new Response(JSON.stringify({ status: { error_code: 429 } }), {
+              status: 429,
+              headers: { "Content-Type": "application/json" },
+            }),
+          ),
+      ],
+    ];
+
+    test.each(failureModes)(
+      "should return 200 with null price and priceUnavailable=true on %s",
+      async (_name, simulateFailure) => {
+        // Arrange
+        const { testUser, authHeader } = await createTestUserWithToken();
+        await createPortfolioWithHolding(testUser.id, {
+          symbol: "BTC",
+          name: "[TEST] Bitcoin",
+          assetType: "crypto",
+          quantity: "0.5",
+          avgCostPerUnit: "60000",
+        });
+        simulateFailure();
+
+        // Act
+        const res = await app.request("/api/v1/portfolio", {
+          method: "GET",
+          headers: { ...authHeader },
+        });
+        const body = await res.json();
+
+        // Assert: endpoint ไม่พัง และข้อมูลต้นทุนเดิมยังอยู่ครบ
+        expect(res.status).toBe(200);
+        const holding = body.holdings[0];
+        expect(holding.quantity).toBeDefined();
+        expect(Number(holding.avgCostPerUnit)).toBe(60000);
+        expect(holding.currentPrice).toBeNull();
+        expect(holding.currentValue).toBeNull();
+        expect(holding.unrealizedPnl).toBeNull();
+        expect(holding.unrealizedPnlPercent).toBeNull();
+        expect(holding.priceUnavailable).toBe(true);
+      },
+    );
   });
 });

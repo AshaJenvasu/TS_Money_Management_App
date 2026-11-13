@@ -1,9 +1,10 @@
 import { prisma } from "../config/prisma.js";
 import { Prisma, PortfolioTransactionType } from "@prisma/client";
 import { PortfolioRepository } from "../repositories/portfolio.repository.js";
-import { CoinGeckoPriceProvider } from "./price.provider.js";
+import { logger } from "../utils/logger.js";
+import { CachedPriceProvider, CoinGeckoPriceProvider } from "./price.provider.js";
 
-const priceProvider = new CoinGeckoPriceProvider();
+const priceProvider = new CachedPriceProvider(new CoinGeckoPriceProvider());
 
 interface CreatePortfolioTransactionInput {
   userId: bigint;
@@ -44,7 +45,13 @@ export class PortfolioService {
     const cryptoSymbols = portfolio.holdings
       .filter((holding) => holding.asset.assetType === "crypto")
       .map((holding) => holding.asset.symbol.toUpperCase());
-    const prices = await priceProvider.getPrices(cryptoSymbols);
+    // ราคาเป็นข้อมูลเสริม: ถ้าดึงไม่ได้ (CoinGecko/Redis ล้ม) ให้ตอบพอร์ตต่อโดยไม่มีราคา แทนที่จะ error 500
+    let prices = new Map<string, number>();
+    try {
+      prices = await priceProvider.getPrices(cryptoSymbols);
+    } catch (error) {
+      logger.warn({ err: error }, "Failed to fetch crypto prices");
+    }
 
     return {
       id: portfolio.id.toString(),
