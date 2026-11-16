@@ -140,7 +140,7 @@ const updateAssetRoute = createRoute({
   tags: ["Asset"],
   summary: "Update asset name",
   description:
-    "แก้ไขชื่อของ Asset โดยมีเงื่อนไขว่า **หาก Asset นี้มี Holding (ยอดถือครอง) ผูกอยู่จะไม่สามารถแก้ไขได้** และชื่อใหม่ต้องไม่ซ้ำกับ Asset อื่นของผู้ใช้",
+    "แก้ไขชื่อของ Asset โดยมีเงื่อนไขว่า **หาก Asset นี้มีประวัติซื้อขาย (แม้ขายหมดแล้ว) จะไม่สามารถแก้ไขได้** และชื่อใหม่ต้องไม่ซ้ำกับ Asset อื่นของผู้ใช้ ถ้า Asset ไม่ใช่ของผู้ใช้จะตอบ 404",
   request: {
     params: AssetIdParamSchema,
     body: {
@@ -155,7 +155,7 @@ const updateAssetRoute = createRoute({
     },
     400: {
       description:
-        "Bad Request - มี Holding ผูกอยู่กับ Asset นี้แล้ว ห้ามแก้ไข",
+        "Bad Request - Asset นี้มีประวัติซื้อขายแล้ว ห้ามแก้ไข",
     },
     401: { description: "Unauthenticated" },
     404: { description: "Not Found - ไม่พบ Asset ที่ระบุ" },
@@ -198,7 +198,7 @@ assetController.openapi(updateAssetRoute, async (c) => {
 
     if (error.message === "CANNOT_UPDATE_ASSET_WITH_HOLDING") {
       return c.json(
-        { message: "Cannot update asset that has active holding" },
+        { message: "Cannot update asset that has transaction history" },
         400,
       );
     }

@@ -16,7 +16,7 @@ export function AssetEditDialog({ assetView, onClose }: AssetEditDialogProps) {
   const queryClient = useQueryClient();
   const { asset, buyCount, sellCount } = assetView;
 
-  // มีประวัติซื้อขายแล้ว ห้ามแก้ไขชื่อ (เดาจากข้อมูลที่มี เงื่อนไขจริงอยู่ที่ backend)
+  // มีประวัติซื้อขายแล้ว ห้ามแก้ไขชื่อ (backend ตรวจนิยามเดียวกัน: มี transaction อย่างน้อย 1 รายการ)
   const hasTransactionHistory = buyCount + sellCount > 0;
 
   const [name, setName] = useState(asset.name);

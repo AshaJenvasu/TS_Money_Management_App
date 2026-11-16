@@ -42,7 +42,24 @@ export class AssetService {
   // 3. Service: updateAsset
   static async updateAsset(id: bigint, userId: bigint, data: { name: string }) {
     try {
-      return await AssetRepository.update(id, data);
+      // เช็ค ownership + ประวัติซื้อขาย + update ทำใน $transaction เดียวกัน (ดู repository)
+      const result = await AssetRepository.updateNameIfNoTransactions(
+        id,
+        userId,
+        data,
+      );
+
+      // ไม่ใช่เจ้าของ = ไม่พบ เหมือน deleteAsset จะได้ไม่ leak ว่า asset มีอยู่จริง
+      if (result.status === "not_found") {
+        throw new Error("ASSET_NOT_FOUND");
+      }
+
+      // ห้ามแก้ถ้ามีประวัติซื้อขายแล้ว (แม้ขายหมดแล้ว) ตรงกับ buyCount + sellCount > 0 ที่ UI ใช้
+      if (result.status === "has_transactions") {
+        throw new Error("CANNOT_UPDATE_ASSET_WITH_HOLDING");
+      }
+
+      return result.asset;
     } catch (error) {
       const prismaError = error as { code?: string };
 

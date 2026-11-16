@@ -43,12 +43,36 @@ export class AssetRepository {
   }
 
   /**
-   * อัปเดต Asset ตาม ID
+   * แก้ชื่อ Asset แบบ atomic: หา asset (id + userId) → นับ transaction → update ใน $transaction เดียวกัน
+   * ล็อกแถว asset ด้วย FOR UPDATE ก่อนนับ เพื่อกัน race ที่มีคนเพิ่ม transaction ให้ asset นี้ระหว่าง check กับ update
+   * (insert transaction ต้องถือ lock FOR KEY SHARE บนแถว asset จึงถูกบล็อกจนกว่า transaction นี้จบ)
    */
-  static async update(id: bigint, data: { name: string }) {
-    return await prisma.asset.update({
-      where: { id },
-      data,
+  static async updateNameIfNoTransactions(
+    id: bigint,
+    userId: bigint,
+    data: { name: string },
+  ) {
+    return await prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<{ id: bigint }[]>`
+        SELECT id FROM assets WHERE id = ${id} AND user_id = ${userId} FOR UPDATE
+      `;
+      if (locked.length === 0) {
+        return { status: "not_found" } as const;
+      }
+
+      const transactionCount = await tx.portfolioTransaction.count({
+        where: { assetId: id },
+      });
+      if (transactionCount > 0) {
+        return { status: "has_transactions" } as const;
+      }
+
+      // userId ใน where เป็นชั้นป้องกันสุดท้าย ถ้าไม่ตรงจะ throw P2025
+      const asset = await tx.asset.update({
+        where: { id, userId },
+        data,
+      });
+      return { status: "updated", asset } as const;
     });
   }
 

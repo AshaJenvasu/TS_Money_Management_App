@@ -63,7 +63,7 @@ export const assetService = {
     return response.data;
   },
 
-  // แก้ไขชื่อ Asset backend จะปฏิเสธถ้า Asset นี้มี holding ผูกอยู่แล้ว
+  // แก้ไขชื่อ Asset backend ตอบ 404 ถ้าไม่ใช่ของ user และ 400 ถ้า Asset นี้มีประวัติซื้อขายแล้ว
   updateAsset: async (
     id: string,
     payload: UpdateAssetPayload,
