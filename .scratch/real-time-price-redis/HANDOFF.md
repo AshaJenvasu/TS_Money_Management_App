@@ -1,12 +1,15 @@
-# Handoff: Real-time price + Redis (อัปเดตล่าสุด: 2026-11-12)
+# Handoff: Real-time price + Redis (อัปเดตล่าสุด: 2026-11-16)
 
 ## เป้าหมาย
 แสดง current price / current value / unrealized P&L ของ crypto holding ใน `GET /api/v1/portfolio` โดย cache ราคาใน Upstash Redis (cache-aside) ดู ADR: `docs/adr/ADR-0001-realtime-crypto-price-caching.md`
 
 ## Ticket (อยู่ใน `.scratch/real-time-price-redis/issues/`)
-- `01-backend-price-provider-and-portfolio-enrich.md` — กำลังทำ (อยู่ขั้น RED)
-- `02-frontend-investment-current-value-pnl.md` — รอ 01
-- `03-backend-forgot-password-rate-limit.md` — รอ Upstash client จาก 01 (ทำขนานกับ 02 ได้)
+- `01-backend-price-provider-and-portfolio-enrich.md` — เสร็จ AC1-AC5 + งานเพิ่ม (symbol regex, cache ผล "ไม่เจอ") commit แล้ว (ไฟล์ ticket ยังเขียน status เดิมว่า ready-for-agent)
+- `02-frontend-investment-current-value-pnl.md` — เสร็จ commit แล้ว (รวมแก้ P&L รวมคลาดเคลื่อนจาก float + test ฝั่ง client, ดู "อัปเดต 2026-11-16") รอทดสอบบนเบราว์เซอร์
+- `03-backend-forgot-password-rate-limit.md` — เสร็จ commit แล้ว (`ipRateLimit` ต่อ IP)
+- `04-asset-identity-coingecko-id.md` — เสร็จทั้ง backend และฟอร์มสร้าง asset commit แล้ว
+- `05-login-rate-limit.md` — เสร็จ commit แล้ว (ชั้น IP + ชั้น identifier, แก้ race เป็น increment-then-check)
+- `06-fix-asset-update-bola.md` — เสร็จ commit แล้ว (`70fe2dc`) เป็น ticket ที่เขียนย้อนหลังหลังงานเสร็จ ไม่ใช่ spec ล่วงหน้า
 
 ## Decisions ที่ตกลงแล้ว
 - Test seams: integration test ที่ `GET /api/v1/portfolio` ผ่าน `app.request` (DB จริง) mock เฉพาะ Redis และ CoinGecko
@@ -119,3 +122,11 @@
 - `helpers/fake-redis.ts` เพิ่ม `decr` และ `del`
 - trade-off: attempt ที่กำลังตรวจรหัสพร้อมกันนับรวมใน limit ชั่วคราว ผู้ใช้จริงที่ login ซ้อน >5 ครั้งพร้อมกันบัญชีเดียวจะโดน 429 (ไม่น่าเกิดในการใช้งานจริง)
 - ยังไม่มี test: กรณี key หมดอายุระหว่าง attempt แล้ว `release` (โค้ดกันค่าติดลบไว้แล้วแต่ยังไม่ได้พิสูจน์ด้วย test)
+
+## อัปเดต 2026-11-16 — ticket 02 แก้ P&L รวม + ticket 06 เสร็จ
+- ticket 02 (commit `29d1728`): ยอด P&L รวมใน `PortfolioSummaryCard` เคยคำนวณ `totalCurrentValue - Σ(quantity * avgCostPerUnit)` ด้วย float ฝั่ง client ทำให้เท่าทุนจริงได้ `-5.55e-17` แล้วสีขึ้นแดงและโชว์ `-฿0.00` แก้เป็นรวม `unrealizedPnl` ที่ server คำนวณด้วย Decimal แล้วปัดเป็นสตางค์ (`Math.round(x * 100) / 100 + 0`) ใน `client/src/utils/portfolioSummary.ts` (`summarizeMarket`, `investment.tsx` เรียกใช้)
+- client ตอนนี้มี test framework แล้ว (ข้อความ "client ไม่มี test framework" ใน "อัปเดต ticket 02" ด้านบนล้าสมัย): เพิ่ม `vitest` + `client/vitest.config.ts` (แยกจาก `vite.config.ts`) + script `bun run test`; test `client/src/utils/portfolioSummary.test.tsx` ผ่าน 5/5 (เท่าทุนได้ `฿0.00` สีเทา, ปัด noise, เขียว/แดง, ไม่รวม asset ไม่มีราคา, ไม่มีราคาเลยได้ `null`)
+- ticket 06 (commit `70fe2dc`): `PUT /assets/:id` เคยไม่เช็ค ownership (BOLA) และกฎ "ห้ามแก้ asset ที่มีประวัติ" มีแค่ฝั่ง UI แก้แล้ว: หา asset ด้วย `id + userId` (ไม่ใช่เจ้าของ → 404 `Asset not found` เหมือน DELETE), นิยาม "มีประวัติ" = มี `PortfolioTransaction` อย่างน้อย 1 รายการ (นับแม้ขายหมดแล้ว) → 400, เช็ค + update อยู่ใน `$transaction` เดียวพร้อม `SELECT ... FOR UPDATE` ล็อกแถว asset (`AssetRepository.updateNameIfNoTransactions`), ข้อความ 400 เป็น "Cannot update asset that has transaction history" (string error ภายใน `CANNOT_UPDATE_ASSET_WITH_HOLDING` ไม่เปลี่ยน)
+- test `asset-update.test.ts` ผ่าน 5/5 (A: คนอื่นแก้ไม่ได้, B: มีประวัติ 2 variant ทั้งถืออยู่และขายหมด, C: ไม่มีประวัติแก้ได้, race: insert transaction ค้างไว้ระหว่างแก้ชื่อ) mutation check: ถอด `FOR UPDATE` แล้ว race test แดง (`expected 200 to be 400`) แล้วคืนโค้ด
+- ทั้งชุด server รัน `--no-file-parallelism`: 82/88 ผ่าน fail 6 ข้อใน `wallets.test.ts` (integration 3 + unit 3) เป็นของเดิม ไม่เกี่ยวกับ asset (รันแบบ parallel จะพังมากกว่านี้เพราะแชร์ DB)
+- ยังเหลือ: (1) ทดสอบหน้า Investment และหน้า login บนเบราว์เซอร์จริง (ต้องตั้ง `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`) รวมเช็คว่า LoginForm จัดการ 429 อย่างไร (2) ก่อน deploy: `bun run db:deploy` และตรวจข้อมูลเดิมบน production (3) ตัดสินใจ scope แยก: flow แก้ `coingecko_id` ให้ asset เดิม (ตอนนี้ `PUT /assets/:id` แก้ได้แค่ชื่อ และ asset ที่มีประวัติแก้อะไรไม่ได้เลย ถ้าเลือกเหรียญผิดต้องลบสร้างใหม่ซึ่งประวัติหาย) (4) Quality Gate: grill-me, regression ทั้งหมด, E2E Playwright, code review, security review (5) สาเหตุที่ `wallets.test.ts` ล้ม 6 ข้อ (ไม่ได้ตรวจ: `tsc` ก็รายงาน `publicId` ขาดใน `wallets.test.ts`)
