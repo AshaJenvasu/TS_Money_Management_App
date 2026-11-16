@@ -27,6 +27,7 @@ import {
   getDateRangeForPreset,
   type DateRange,
 } from "../utils/dateRangePresets";
+import { summarizeMarket } from "../utils/portfolioSummary";
 import type { AssetView } from "../types/investment";
 import type { PortfolioTransactionListItem } from "../services/portfolio.services";
 
@@ -125,21 +126,8 @@ function InvestmentPage() {
   );
   const totalCost = heldAssetViews.reduce((sum, view) => sum + view.cost, 0);
 
-  // สรุปมูลค่าตลาดรวม คิดเฉพาะสินทรัพย์ที่มีราคา และเทียบกับต้นทุนของสินทรัพย์ชุดเดียวกันเท่านั้น
-  const pricedViews = heldAssetViews.filter((view) => view.currentValue !== null);
-  const totalCurrentValue = pricedViews.reduce(
-    (sum, view) => sum + (view.currentValue ?? 0),
-    0,
-  );
-  const pricedCost = pricedViews.reduce((sum, view) => sum + view.cost, 0);
-  const marketSummary =
-    pricedViews.length > 0
-      ? {
-          totalCurrentValue,
-          totalUnrealizedPnl: totalCurrentValue - pricedCost,
-          unpricedCount: heldAssetViews.length - pricedViews.length,
-        }
-      : null;
+  // สรุปมูลค่าตลาดรวม คิดเฉพาะสินทรัพย์ที่มีราคา (logic อยู่ใน summarizeMarket)
+  const marketSummary = summarizeMarket(heldAssetViews);
 
   const filteredAssetViews = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();

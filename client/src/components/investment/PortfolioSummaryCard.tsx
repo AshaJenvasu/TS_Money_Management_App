@@ -2,6 +2,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import HeroDecor from "../wallet-detail/HeroDecor";
 import type { AssetView } from "../../types/investment";
 import { formatCurrency } from "../../utils/formatCurrency";
+import type { MarketSummary } from "../../utils/portfolioSummary";
 import { PnlText } from "./PnlText";
 
 const DONUT_COLORS = [
@@ -13,13 +14,6 @@ const DONUT_COLORS = [
   "#9B8AFB",
   "#E2779E",
 ];
-
-interface MarketSummary {
-  totalCurrentValue: number;
-  totalUnrealizedPnl: number;
-  // จำนวนสินทรัพย์ที่ถืออยู่แต่ไม่มีราคา (ไม่นับรวมในมูลค่าตลาดและกำไร/ขาดทุน)
-  unpricedCount: number;
-}
 
 interface PortfolioSummaryCardProps {
   totalCost: number;
