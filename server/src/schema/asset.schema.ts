@@ -13,10 +13,14 @@ export const CreateAssetBodySchema = z
       .openapi({ example: "BTC" }),
     name: z.string().min(1).max(100).openapi({ example: "Bitcoin" }),
     asset_type: AssetTypeSchema.openapi({ example: "crypto" }),
+    // รูปแบบ id ของ CoinGecko: a-z 0-9 - _ ยาว 1-100 (ตรวจกับ /coins/list จริง 21,855 id: มี id ที่มี _ และ id ยาว 1 ตัวอักษรอยู่จริง)
+    // ไม่รับ comma/ช่องว่าง/อักขระพิเศษ กันเอาไปต่อเป็นหลายเหรียญใน query ids และสร้าง key ขยะใน Redis
     coingecko_id: z
       .string()
-      .min(1)
-      .max(100)
+      .regex(
+        /^[a-z0-9_-]{1,100}$/,
+        "coingecko_id must be 1-100 chars of a-z, 0-9, - or _",
+      )
       .optional()
       .openapi({
         example: "bitcoin",

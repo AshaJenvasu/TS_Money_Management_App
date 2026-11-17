@@ -87,3 +87,53 @@ describe("POST /api/v1/assets - CoinGecko id", () => {
     expect(body.coingecko_id).toBeNull();
   });
 });
+
+describe("POST /api/v1/assets - coingecko_id format", () => {
+  test.each([
+    ["contains a comma", "bitcoin,ethereum"],
+    ["contains a space", "bit coin"],
+    ["contains an ampersand", "bitcoin&vs_currency=usd"],
+    ["contains uppercase letters", "Bitcoin"],
+    ["is longer than 100 characters", "a".repeat(101)],
+  ])(
+    "🔴 Sad Path: should return 400 Bad Request when coingecko_id %s",
+    async (_name, coingeckoId) => {
+      const { testUser, authHeader } = await createTestUserWithToken();
+
+      const res = await postAsset(authHeader, {
+        symbol: "BTC",
+        name: "[TEST] Bitcoin",
+        asset_type: "crypto",
+        coingecko_id: coingeckoId,
+      });
+
+      expect(res.status).toBe(400);
+      const count = await prisma.asset.count({
+        where: { userId: testUser.id },
+      });
+      expect(count).toBe(0);
+    },
+  );
+
+  // id จริงของ CoinGecko ที่หน้าตาไม่ธรรมดา (ตรวจจาก /coins/list) ต้องยังสร้างได้
+  test.each([
+    ["hyphenated", "usd-coin"],
+    ["with an underscore", "aaai_agent-by-virtuals"],
+    ["a single character", "b"],
+  ])(
+    "🟢 Happy Path: should accept a real-world coingecko_id that is %s",
+    async (_name, coingeckoId) => {
+      const { authHeader } = await createTestUserWithToken();
+
+      const res = await postAsset(authHeader, {
+        symbol: "COIN",
+        name: "[TEST] Coin",
+        asset_type: "crypto",
+        coingecko_id: coingeckoId,
+      });
+
+      expect(res.status).toBe(201);
+      expect((await res.json()).coingecko_id).toBe(coingeckoId);
+    },
+  );
+});
