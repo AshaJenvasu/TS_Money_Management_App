@@ -89,8 +89,6 @@ export class AuthService {
     }
 
     // กำหนดอายุ Token: ติ๊ก Remember Me ให้ 30 วัน / ไม่ติ๊ก ให้ 1 วัน
-    console.log("rememberMe:", data.rememberMe);
-
     const expiresInSeconds = data.rememberMe
       ? 60 * 60 * 24 * 30 // 30 วัน
       : 60 * 60 * 24; // 1 วัน
