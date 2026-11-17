@@ -23,6 +23,8 @@ app.use(
     origin: "http://localhost:5173", // URL ของฝั่ง Frontend
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
+    // ให้ browser อ่าน Retry-After ของ 429 ได้เมื่อยิงข้ามโดเมน (header นี้ไม่อยู่ใน safelist ของ CORS)
+    exposeHeaders: ["Retry-After"],
     credentials: true, // เปิดให้รับ-ส่ง Cookie / Credentials
   }),
 );

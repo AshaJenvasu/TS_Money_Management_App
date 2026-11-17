@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "../../../stores/useAuthStore";
 import { loginSchema } from "../../../schema/auth.schema";
@@ -7,6 +7,21 @@ import { LoginScene } from "./LoginScene";
 import { authService } from "../../../api/auth.services";
 import { InputField } from "../../ui/InputField";
 import { isAxiosError } from "axios";
+import {
+  formatLockoutDuration,
+  parseRetryAfterSeconds,
+  readLockoutMessage,
+} from "../../../utils/loginLockout";
+
+// กล่องแจ้งข้อผิดพลาดเหนือฟอร์ม (ใช้ทั้ง error ทั่วไปและ lockout)
+const errorBoxStyle: React.CSSProperties = {
+  color: "#CF3D6B",
+  fontSize: "13px",
+  marginBottom: "12px",
+  padding: "8px 12px",
+  background: "rgba(207, 61, 107, 0.1)",
+  borderRadius: "10px",
+};
 
 export function LoginForm() {
   const navigate = useNavigate();
@@ -22,9 +37,30 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [errorMsg, setErrorMsg] = useState("");
+  // Lockout จาก 429 (rate limit): วินาทีที่เหลือ (null = ไม่ถูกล็อก) และข้อความจาก backend
+  const [lockoutSeconds, setLockoutSeconds] = useState<number | null>(null);
+  const [lockoutMessage, setLockoutMessage] = useState("");
+
+  const isLockedOut = lockoutSeconds !== null;
+
+  // นับถอยหลังทีละ 1 วินาทีจนถึง 0 แล้วปลดล็อก
+  // cleanup ทำงานตอนปลดล็อกหรือ unmount: หยุด interval และล้างข้อความ lockout
+  useEffect(() => {
+    if (!isLockedOut) return;
+    const timer = setInterval(() => {
+      setLockoutSeconds((prev) =>
+        prev === null || prev <= 1 ? null : prev - 1,
+      );
+    }, 1000);
+    return () => {
+      clearInterval(timer);
+      setLockoutMessage("");
+    };
+  }, [isLockedOut]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLockedOut) return;
     setErrorMsg("");
     setErrors({});
 
@@ -64,7 +100,13 @@ export function LoginForm() {
       navigate({ to: "/dashboard" });
     } catch (err: unknown) {
       if (isAxiosError(err)) {
-        if (err.response?.status === 401) {
+        if (err.response?.status === 429) {
+          // โดน rate limit: เวลารอมาใน header Retry-After (วินาที) ข้อความมาจาก backend
+          setLockoutMessage(readLockoutMessage(err.response.data));
+          setLockoutSeconds(
+            parseRetryAfterSeconds(err.response.headers["retry-after"]),
+          );
+        } else if (err.response?.status === 401) {
           setErrorMsg(
             "อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้องนะ ลองตรวจสอบอีกครั้งน้า 😊",
           );
@@ -215,18 +257,13 @@ export function LoginForm() {
                 เข้าสู่ระบบเพื่อจัดการการเงินของคุณ และเดินทางสู่เป้าหมายในอนาคต
               </p>
 
-              {errorMsg && (
-                <div
-                  style={{
-                    color: "#CF3D6B",
-                    fontSize: "13px",
-                    marginBottom: "12px",
-                    padding: "8px 12px",
-                    background: "rgba(207, 61, 107, 0.1)",
-                    borderRadius: "10px",
-                  }}
-                >
-                  {errorMsg}
+              {errorMsg && <div style={errorBoxStyle}>{errorMsg}</div>}
+
+              {lockoutSeconds !== null && (
+                <div style={errorBoxStyle} role="alert">
+                  {lockoutMessage} 🙏
+                  <br />
+                  ลองใหม่ได้ในอีก {formatLockoutDuration(lockoutSeconds)} น้า ⏳
                 </div>
               )}
 
@@ -275,9 +312,15 @@ export function LoginForm() {
                 <button
                   type="submit"
                   className="anime-btn anime-btn-login"
-                  disabled={loading}
+                  disabled={loading || isLockedOut}
                 >
-                  <span>{loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}</span>
+                  <span>
+                    {isLockedOut
+                      ? `ลองใหม่ได้ในอีก ${formatLockoutDuration(lockoutSeconds)}`
+                      : loading
+                        ? "กำลังเข้าสู่ระบบ..."
+                        : "เข้าสู่ระบบ"}
+                  </span>
                   <svg className="ic" style={{ width: 20, height: 20 }}>
                     <use href="#i-arrow" />
                   </svg>

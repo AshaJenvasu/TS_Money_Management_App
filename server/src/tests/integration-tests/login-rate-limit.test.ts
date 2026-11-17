@@ -117,6 +117,32 @@ describe("POST /api/v1/auth/login - rate limit", () => {
       expectValidRetryAfter(blocked);
     });
 
+    test("🔴 should expose Retry-After to cross-origin browsers via CORS", async () => {
+      const ip = "203.0.113.11";
+      for (let i = 0; i < 10; i++) {
+        await login(`nobody_${i}@example.com`, WRONG_PASSWORD, ip);
+      }
+
+      const blocked = await app.request("/api/v1/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "http://localhost:5173",
+          "x-forwarded-for": ip,
+        },
+        body: JSON.stringify({
+          identifier: "nobody@example.com",
+          password: WRONG_PASSWORD,
+          rememberMe: false,
+        }),
+      });
+
+      expect(blocked.status).toBe(429);
+      expect(blocked.headers.get("Access-Control-Expose-Headers")).toContain(
+        "Retry-After",
+      );
+    });
+
     test("🟢 should skip the IP limit when the client IP cannot be determined", async () => {
       for (let i = 0; i < 11; i++) {
         const res = await login(`nobody_${i}@example.com`, WRONG_PASSWORD);
