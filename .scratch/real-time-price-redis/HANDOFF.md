@@ -145,3 +145,10 @@
 - ผล: `wallets.test.ts` unit+integration 42/42; ทั้งชุด server `--no-file-parallelism` **88/88 ผ่านหมด** (ตัวเลข 82/88 ใน section 2026-11-16 ด้านบนล้าสมัยแล้ว)
 - ข้อควรระวัง: ครั้งแรกที่รันพบว่า Docker Desktop/Postgres local (`localhost:5434`) ไม่ได้รัน ทำให้ทุก test พังที่ `cleanTestData()` ใน `setup.ts` (19/19 ใน unit wallets) — ต้องเปิด Postgres ก่อนรัน test เสมอ; `tsc --noEmit` เคยรายงาน `publicId` ขาดใน `wallets.test.ts` — เติม `publicId` ใน mock ครบแล้ว (commit `19d0d4a`) ตอนนี้ `server` เหลือ 5 error ที่ไม่เกี่ยวกับงาน wallets: `node_modules` 4 จุด (`har-format` ของ `@scalar/types` 2, `@sendgrid/mail` import `Client` 1, `thread-stream` `TransferListItem` 1) กับ `src/utils/email.ts(7,26)` `Cannot find namespace 'nodemailer'` 1; ยืนยันซ้ำแล้วทั้งชุด server `--no-file-parallelism` 88/88
 - ยังเหลือเหมือนเดิม ยกเว้นข้อ (5) ที่ปิดแล้ว
+
+## อัปเดต 2026-11-17 — LoginForm จัดการ 429 (rate limit)
+- เดิม `LoginForm.tsx` ปล่อย 429 ตกเคส "ระบบมีปัญหานิดหน่อย" ตอนนี้แยก 429 ออกมา: อ่าน header `retry-after` (วินาที, parse ไม่ได้/ไม่มี/≤0 → fallback 900) กับ `message` จาก body (แยก IP-limit กับ identifier-limit อยู่แล้ว) แสดงคู่กับเวลานับถอยหลัง (state `lockoutSeconds`/`lockoutMessage`, `setInterval` ลดทีละ 1 วินาที cleanup ตอนปลดล็อกและ unmount) ปุ่ม submit `disabled={loading || lockoutSeconds !== null}` และข้อความปุ่มเป็น "ลองใหม่ได้ในอีก …"; ช่อง input ไม่ disable ตามสเปค
+- ตรรกะ parse/format อยู่ใน `client/src/utils/loginLockout.ts` (test `loginLockout.test.ts` 6/6); ไม่มี test ระดับ component เพราะ client ยังไม่มี jsdom/testing-library (ยังไม่ได้ทดสอบบนเบราว์เซอร์จริง)
+- server CORS เพิ่ม `exposeHeaders: ["Retry-After"]` (`server/src/index.ts`) ตอนนี้ same-origin (Vite proxy / Vercel rewrite) ยังไม่จำเป็น แต่กันไว้ถ้าเปลี่ยนเป็นยิงข้ามโดเมน; test ใน `login-rate-limit.test.ts` (mutation check: ถอด option แล้วแดง); server 89/89, client 11/11
+- ข้อควรระวัง: นับถอยหลังลดทีละ 1 ต่อ tick จึงคลาดได้ถ้าแท็บถูกพักนาน (ปลดล็อกช้ากว่าจริง ไม่ปลดเร็วเกิน); รีเฟรชหน้าแล้ว lockout หายแต่ server ยังล็อกอยู่ (กดแล้วได้ 429 ซ้ำและนับถอยหลังใหม่)
+- ปิด "ยังไม่ได้ทำ" เรื่อง LoginForm กับ 429 จาก ticket 05 แล้ว เหลือแค่ทดสอบบนเบราว์เซอร์จริง
