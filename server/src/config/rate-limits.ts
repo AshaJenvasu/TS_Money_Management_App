@@ -14,6 +14,14 @@ export const RATE_LIMITS = {
     maxRequests: 10,
     windowSeconds: 15 * 60,
   },
+  // ต่อ IP นับทุก request ของ /assets/search-coins: ทุกครั้งที่ cache miss จะยิง CoinGecko จาก IP ของ server เดียวกับที่ดึงราคา
+  // จึงต้องกันไม่ให้ user คนเดียวกินโควตาจนราคาของทุกคนล่ม (หน้าจอ debounce 300ms พิมพ์หนึ่งคำใช้ไม่กี่ครั้ง)
+  searchCoins: {
+    name: "search-coins",
+    message: "ค้นหาเหรียญบ่อยเกินไป กรุณาลองใหม่ภายหลัง",
+    maxRequests: 30,
+    windowSeconds: 60,
+  },
   // ต่อ identifier (email/username) นับเฉพาะ login ที่ล้มเหลว เข้มกว่า IP เพราะเจาะจงบัญชีเดียว
   loginEmail: {
     name: "login-email",
