@@ -183,13 +183,21 @@ export class AuthService {
     const newPasswordHash = await bcrypt.hash(newPassword, 10);
 
     // ต้องอัปเดต password และ mark token ว่าใช้แล้ว พร้อมกันแบบ atomic กันเอา token ไปใช้ซ้ำได้ถ้าขั้นใดขั้นหนึ่งล้มเหลวกลางคัน
+    // mark ก่อนเสมอ: ถ้าชิง mark ไม่สำเร็จ (มี request อื่นใช้ token นี้ไปแล้วระหว่างที่เรา hash รหัสผ่าน) ให้ throw
+    // transaction จะ rollback เอง รหัสผ่านจึงไม่ถูกเปลี่ยนโดย request ที่แพ้
     await prisma.$transaction(async (tx) => {
+      const claimed = await PasswordResetTokenRepository.markAsUsed(
+        resetToken.id,
+        tx,
+      );
+      if (!claimed) {
+        throw new Error("TOKEN_ALREADY_USED");
+      }
       await UserRepository.updatePasswordHash(
         resetToken.userId,
         newPasswordHash,
         tx,
       );
-      await PasswordResetTokenRepository.markAsUsed(resetToken.id, tx);
     });
   }
 }
