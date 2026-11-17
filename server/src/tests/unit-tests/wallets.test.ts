@@ -2,6 +2,9 @@ import { describe, test, expect, beforeEach, vi } from "vitest";
 import { WalletService } from "../../services/wallet.services";
 import { WalletRepository } from "../../../src/repositories/wallet.repository";
 
+// uuid คงที่ ใช้เป็น publicId ของ mock Wallet (ให้ type ตรงกับ Prisma schema)
+const MOCK_PUBLIC_ID = "550e8400-e29b-41d4-a716-446655440000";
+
 describe("WalletService Unit Tests", () => {
   beforeEach(() => {
     vi.restoreAllMocks(); // Mock ทั้งหมดใน Vitest ก่อนเริ่ม Test แต่ละข้อ
@@ -18,6 +21,7 @@ describe("WalletService Unit Tests", () => {
       const mockWalletsFromDb = [
         {
           id: 101n,
+          publicId: MOCK_PUBLIC_ID,
           userId: mockUserId,
           name: "Main Wallet",
           createdAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -38,6 +42,7 @@ describe("WalletService Unit Tests", () => {
       expect(result).toEqual([
         {
           id: "101",
+          publicId: MOCK_PUBLIC_ID,
           name: "Main Wallet",
           createdAt: "2026-01-01T00:00:00.000Z",
           updatedAt: "2026-01-01T00:00:00.000Z",
@@ -80,6 +85,7 @@ describe("WalletService Unit Tests", () => {
       const walletName = "Savings";
       const mockCreatedWallet = {
         id: 201n,
+        publicId: MOCK_PUBLIC_ID,
         userId: mockUserId,
         name: walletName,
         createdAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -104,6 +110,7 @@ describe("WalletService Unit Tests", () => {
       expect(createSpy).toHaveBeenCalledWith(mockUserId, walletName);
       expect(result).toEqual({
         id: "201",
+        publicId: MOCK_PUBLIC_ID,
         name: "Savings",
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
@@ -116,6 +123,7 @@ describe("WalletService Unit Tests", () => {
       const walletName = "Savings";
       const existingWallet = {
         id: 101n,
+        publicId: MOCK_PUBLIC_ID,
         userId: mockUserId,
         name: walletName,
         createdAt: new Date(),
@@ -226,6 +234,7 @@ describe("WalletService Unit Tests", () => {
 
       const existingWallet = {
         id: mockWalletId,
+        publicId: MOCK_PUBLIC_ID,
         userId: mockUserId,
         name: "Old Name",
         createdAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -266,6 +275,7 @@ describe("WalletService Unit Tests", () => {
       expect(updateSpy).toHaveBeenCalledWith(mockWalletId, newName);
       expect(result).toEqual({
         id: "101",
+        publicId: MOCK_PUBLIC_ID,
         name: "Investment",
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-02T00:00:00.000Z",
@@ -294,6 +304,7 @@ describe("WalletService Unit Tests", () => {
 
       const existingWallet = {
         id: mockWalletId,
+        publicId: MOCK_PUBLIC_ID,
         userId: mockUserId,
         name: "Old Name",
         createdAt: new Date(),
@@ -302,6 +313,7 @@ describe("WalletService Unit Tests", () => {
 
       const otherWalletWithSameName = {
         id: 102n, // เป็นของ Wallet ใบอื่น
+        publicId: MOCK_PUBLIC_ID,
         userId: mockUserId,
         name: duplicateName,
         createdAt: new Date(),
@@ -347,6 +359,7 @@ describe("WalletService Unit Tests", () => {
       const mockUserId = 1n;
       const existingWallet = {
         id: mockWalletId,
+        publicId: MOCK_PUBLIC_ID,
         userId: mockUserId,
         name: "Wallet To Delete",
         createdAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -371,6 +384,7 @@ describe("WalletService Unit Tests", () => {
       expect(deleteSpy).toHaveBeenCalledWith(mockWalletId);
       expect(result).toEqual({
         id: "101",
+        publicId: MOCK_PUBLIC_ID,
         name: "Wallet To Delete",
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
@@ -416,6 +430,7 @@ describe("WalletService Unit Tests", () => {
       const mockUserId = 1n;
       const existingWallet = {
         id: mockWalletId,
+        publicId: MOCK_PUBLIC_ID,
         userId: mockUserId,
         name: "Main Wallet",
         createdAt: new Date("2026-01-01T00:00:00.000Z"),
