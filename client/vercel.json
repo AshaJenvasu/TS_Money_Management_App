@@ -1,9 +1,19 @@
 {
-  "rewrites": [
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "routes": [
     {
-      "source": "/api/:path*",
-      "destination": "https://ts-money-management-app.onrender.com/api/:path*"
-    },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+      "src": "/api/(.*)",
+      "dest": "https://ts-money-management-app.onrender.com/api/$1",
+      "transforms": [
+        {
+          "type": "request.headers",
+          "op": "set",
+          "target": { "key": "x-internal-proxy-secret" },
+          "args": "$INTERNAL_PROXY_SECRET",
+          "env": ["INTERNAL_PROXY_SECRET"]
+        }
+      ]
+    }
+  ],
+  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]
 }
