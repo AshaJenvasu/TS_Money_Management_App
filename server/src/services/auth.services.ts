@@ -25,6 +25,11 @@ const RATE_LIMIT_WINDOW_MINUTES = 15;
 const RATE_LIMIT_MAX_ATTEMPTS = 3;
 const RESET_TOKEN_EXPIRES_MINUTES = 30;
 
+// hash คงที่ (bcrypt cost 10 เท่ากับของจริง) ของสตริงสุ่มที่ไม่มีใครรู้ ใช้เทียบรหัสผ่านเมื่อไม่พบ user
+// เพื่อให้เวลาตอบใกล้เคียงกับกรณีพบ user ไม่งั้นวัดเวลาตอบเดาได้ว่า identifier ไหนมีอยู่ในระบบ
+export const DUMMY_PASSWORD_HASH =
+  "$2b$10$GMqP0w8exjTa4EKq2k370uzm6Gy3gKoBuMRE9CWvbhr0iAfaGNMce";
+
 export class AuthService {
   // Logic สำหรับการ Register
   static async register(data: {
@@ -75,6 +80,8 @@ export class AuthService {
     const user = await UserRepository.findByIdentifier(data.identifier);
 
     if (!user) {
+      // ผลของ compare ไม่ใช้ ทำเพื่อกินเวลาให้เท่ากับกรณีพบ user (กัน timing attack เดา identifier)
+      await bcrypt.compare(data.password, DUMMY_PASSWORD_HASH);
       throw new Error("INVALID_CREDENTIALS");
     }
 
