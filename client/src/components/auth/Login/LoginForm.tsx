@@ -87,14 +87,11 @@ export function LoginForm() {
         rememberMe,
       });
 
-      // 2. ดึง token และ user จาก response (ปรับ key ตามที่ backend ส่งกลับมา เช่น res.token, res.user)
-      const token = res.token;
-      const user = res.user || { email: identifier }; // กรณี backend ส่งมาแค่ token ให้ fallback user ไว้ก่อน
+      // 2. ดึง user จาก response (session อยู่ใน cookie httpOnly ที่ server ตั้งให้แล้ว ไม่เก็บ token ฝั่ง client)
+      const user = res.user || { email: identifier };
 
-      // 3. เซ็ตค่าลง Zustand Store
-      if (token) {
-        setAuth(token, user);
-      }
+      // 3. เซ็ตค่าลง Zustand Store (ใช้เป็นสถานะ "login แล้ว" ฝั่ง UI)
+      setAuth(user);
 
       alert(res.message || "เข้าสู่ระบบสำเร็จ!");
       navigate({ to: "/dashboard" });

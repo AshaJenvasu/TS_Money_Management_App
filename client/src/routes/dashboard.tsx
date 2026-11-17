@@ -32,9 +32,9 @@ import { formatCurrency } from "../utils/formatCurrency";
 // หน้า Dashboard
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: () => {
-    const { token } = useAuthStore.getState();
+    const { user } = useAuthStore.getState();
 
-    if (!token) {
+    if (!user) {
       throw redirect({ to: "/login" });
     }
   },

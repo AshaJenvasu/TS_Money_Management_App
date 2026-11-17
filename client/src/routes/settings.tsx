@@ -169,8 +169,8 @@ function SettingsPage() {
 
 export const Route = createFileRoute("/settings")({
   beforeLoad: () => {
-    const { token } = useAuthStore.getState();
-    if (!token) {
+    const { user } = useAuthStore.getState();
+    if (!user) {
       throw redirect({ to: "/login" });
     }
   },

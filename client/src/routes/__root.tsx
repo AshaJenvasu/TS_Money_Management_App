@@ -20,20 +20,22 @@ export const queryClient = new QueryClient();
 // Component หลักสำหรับ Root
 function RootLayout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, token, logout, setAuth } = useAuthStore();
+  const { user, logout, setAuth } = useAuthStore();
+  // ใช้ boolean เป็น dependency: setAuth สร้าง object user ใหม่ทุกครั้ง ถ้าอิง user ตรงๆ effect จะวนไม่จบ
+  const hasSession = user !== null;
   const navigate = useNavigate();
   const location = useLocation();
 
   // ตรวจสอบการเข้าสู่ระบบ
   useEffect(() => {
     const verifyUser = async () => {
-      if (!token) return;
+      if (!hasSession) return;
 
       try {
         const data = await authService.getProfile();
 
         if (data.user) {
-          setAuth(token, data.user);
+          setAuth(data.user);
         }
       } catch (error) {
         if (isAxiosError(error) && error.response?.status === 401) {
@@ -46,16 +48,16 @@ function RootLayout() {
     };
 
     verifyUser();
-  }, [token, setAuth, logout]);
+  }, [hasSession, setAuth, logout]);
 
   useEffect(() => {
     // หน้าที่ user login แล้วไม่ควรเห็นอีก ให้เด้งไป dashboard อัตโนมัติ (หน้าอื่นๆทั้งหมดเข้าได้ปกติไม่ว่าจะ login อยู่หรือไม่)
     const authOnlyPages = ["/login", "/register"];
 
-    if ((token || user) && authOnlyPages.includes(location.pathname)) {
+    if (user && authOnlyPages.includes(location.pathname)) {
       navigate({ to: "/dashboard", replace: true });
     }
-  }, [token, user, navigate, location.pathname]);
+  }, [user, navigate, location.pathname]);
 
   const handleLogout = async () => {
     try {
@@ -78,7 +80,7 @@ function RootLayout() {
           <div className="flex h-[60px] items-center justify-between gap-3 px-3 sm:px-5 lg:px-7">
             {/* Logo */}
             <Link
-              to={token || user ? "/dashboard" : "/login"}
+              to={user ? "/dashboard" : "/login"}
               onClick={() => setIsMenuOpen(false)}
               className="flex shrink-0 items-center gap-2 no-underline"
             >
@@ -89,7 +91,7 @@ function RootLayout() {
             </Link>
 
             {/* Desktop Navigation */}
-            {user || token ? (
+            {user ? (
               <div className="hidden items-center gap-3 md:flex">
                 <nav className="flex items-center gap-2">
                   <Link
@@ -204,7 +206,7 @@ function RootLayout() {
           {/* Mobile Dropdown */}
           {isMenuOpen && (
             <div className="border-t border-[#BFD3F3]/15 bg-[#141A36] px-4 py-4 md:hidden">
-              {user || token ? (
+              {user ? (
                 <div className="flex flex-col gap-2">
                   <div className="mb-2 flex items-center gap-3 rounded-xl border border-[#BFD3F3]/20 bg-[#1E2A66]/60 p-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#5568E0]">
