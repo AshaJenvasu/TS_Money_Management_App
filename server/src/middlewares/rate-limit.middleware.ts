@@ -11,15 +11,37 @@ export interface IpRateLimitOptions {
   message: string;
 }
 
-// อ่าน IP ของผู้ใช้หลัง proxy (Render) จากค่าซ้ายสุดของ x-forwarded-for
-// หมายเหตุ: ค่าซ้ายสุดผู้ใช้ปลอมเองได้ จึงเป็นเพียงด่านแรก (ยังมี rate limit ต่อ email ใน DB เป็นด่านสอง)
-// คืน null เมื่ออ่าน IP ไม่ได้ เพื่อให้ผู้เรียก fail-open แทนการรวมทุกคนไว้ใน bucket เดียวกัน
-function getClientIp(
+// จำนวน proxy ที่เชื่อถือได้หน้า server (ตั้งผ่าน env TRUSTED_PROXY_HOPS) เทียบเท่า "trust proxy" ของ Express
+// แต่ละ proxy ที่เชื่อถือได้จะต่อ IP ของฝั่งที่มันเห็นไว้ "ท้าย" x-forwarded-for ส่วนค่าทางซ้ายผู้ใช้ปลอมเองได้
+// จึงอ่านจากท้ายสุดย้อนกลับมา N ตำแหน่ง ไม่อ่านจากซ้ายสุด
+// ไม่ได้ตั้ง/ตั้งผิดรูปแบบ = 0 = ไม่เชื่อ header เลย (ถือว่าอ่าน IP ไม่ได้ ข้าม IP limit พร้อม warn) ต้องตั้งให้ตรงกับ hop จริงของ deploy
+export function getTrustedProxyHops(): number {
+  const raw = process.env.TRUSTED_PROXY_HOPS?.trim();
+  if (!raw || !/^\d+$/.test(raw)) return 0;
+  return Number.parseInt(raw, 10);
+}
+
+if (process.env.NODE_ENV === "production" && getTrustedProxyHops() < 1) {
+  logger.warn(
+    "TRUSTED_PROXY_HOPS is not set: the client IP cannot be determined, so IP rate limits are skipped",
+  );
+}
+
+// อ่าน IP ของผู้ใช้จาก x-forwarded-for ตำแหน่งที่ N จากท้าย (N = จำนวน proxy ที่เชื่อถือได้)
+// ไม่ใช้ x-real-ip เพราะผู้ใช้ตั้งเองได้เหมือนกันและไม่มี hop ให้อ้างอิง
+// คืน null เมื่ออ่าน IP ไม่ได้ (ไม่ได้ตั้ง hop, ไม่มี header, หรือมี entry น้อยกว่าจำนวน proxy ที่ควรผ่านมา)
+// เพื่อให้ผู้เรียก fail-open แทนการรวมทุกคนไว้ใน bucket เดียวกัน
+export function getClientIp(
   forwardedFor: string | undefined,
-  realIp: string | undefined,
+  trustedProxyHops: number,
 ): string | null {
-  const first = forwardedFor?.split(",")[0]?.trim();
-  return first || realIp?.trim() || null;
+  if (trustedProxyHops < 1 || !forwardedFor) return null;
+  const entries = forwardedFor
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  if (entries.length < trustedProxyHops) return null;
+  return entries[entries.length - trustedProxyHops] ?? null;
 }
 
 // Fixed-window rate limit ต่อ IP เก็บตัวนับใน Redis (Upstash)
@@ -27,7 +49,7 @@ export const ipRateLimit = (options: IpRateLimitOptions) =>
   createMiddleware(async (c, next) => {
     const ip = getClientIp(
       c.req.header("x-forwarded-for"),
-      c.req.header("x-real-ip"),
+      getTrustedProxyHops(),
     );
 
     // Fail-open: อ่าน IP ไม่ได้ก็ข้าม rate limit ของ request นี้ (ยังมี limit ต่อ email ใน DB เป็นด่านสอง)
