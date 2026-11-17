@@ -29,13 +29,13 @@ async function createLoginUser() {
   return user;
 }
 
-// ไม่ส่ง ip = ไม่ใส่ header x-forwarded-for เลย (จำลองกรณีอ่าน IP ไม่ได้)
+// ไม่ส่ง ip = ไม่ใส่ header x-vercel-forwarded-for เลย (จำลองกรณีอ่าน IP ไม่ได้)
 function login(identifier: string, password: string, ip?: string) {
   return app.request("/api/v1/auth/login", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(ip ? { "x-forwarded-for": ip } : {}),
+      ...(ip ? { "x-vercel-forwarded-for": ip } : {}),
     },
     body: JSON.stringify({ identifier, password, rememberMe: false }),
   });
@@ -128,7 +128,7 @@ describe("POST /api/v1/auth/login - rate limit", () => {
         headers: {
           "Content-Type": "application/json",
           Origin: "http://localhost:5173",
-          "x-forwarded-for": ip,
+          "x-vercel-forwarded-for": ip,
         },
         body: JSON.stringify({
           identifier: "nobody@example.com",

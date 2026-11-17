@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import { createMiddleware } from "hono/factory";
 import { redis } from "../config/redis.js";
 import { logger } from "../utils/logger.js";
@@ -11,46 +12,24 @@ export interface IpRateLimitOptions {
   message: string;
 }
 
-// จำนวน proxy ที่เชื่อถือได้หน้า server (ตั้งผ่าน env TRUSTED_PROXY_HOPS) เทียบเท่า "trust proxy" ของ Express
-// แต่ละ proxy ที่เชื่อถือได้จะต่อ IP ของฝั่งที่มันเห็นไว้ "ท้าย" x-forwarded-for ส่วนค่าทางซ้ายผู้ใช้ปลอมเองได้
-// จึงอ่านจากท้ายสุดย้อนกลับมา N ตำแหน่ง ไม่อ่านจากซ้ายสุด
-// ไม่ได้ตั้ง/ตั้งผิดรูปแบบ = 0 = ไม่เชื่อ header เลย (ถือว่าอ่าน IP ไม่ได้ ข้าม IP limit พร้อม warn) ต้องตั้งให้ตรงกับ hop จริงของ deploy
-export function getTrustedProxyHops(): number {
-  const raw = process.env.TRUSTED_PROXY_HOPS?.trim();
-  if (!raw || !/^\d+$/.test(raw)) return 0;
-  return Number.parseInt(raw, 10);
-}
-
-if (process.env.NODE_ENV === "production" && getTrustedProxyHops() < 1) {
-  logger.warn(
-    "TRUSTED_PROXY_HOPS is not set: the client IP cannot be determined, so IP rate limits are skipped",
-  );
-}
-
-// อ่าน IP ของผู้ใช้จาก x-forwarded-for ตำแหน่งที่ N จากท้าย (N = จำนวน proxy ที่เชื่อถือได้)
-// ไม่ใช้ x-real-ip เพราะผู้ใช้ตั้งเองได้เหมือนกันและไม่มี hop ให้อ้างอิง
-// คืน null เมื่ออ่าน IP ไม่ได้ (ไม่ได้ตั้ง hop, ไม่มี header, หรือมี entry น้อยกว่าจำนวน proxy ที่ควรผ่านมา)
-// เพื่อให้ผู้เรียก fail-open แทนการรวมทุกคนไว้ใน bucket เดียวกัน
-export function getClientIp(
-  forwardedFor: string | undefined,
-  trustedProxyHops: number,
-): string | null {
-  if (trustedProxyHops < 1 || !forwardedFor) return null;
-  const entries = forwardedFor
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-  if (entries.length < trustedProxyHops) return null;
-  return entries[entries.length - trustedProxyHops] ?? null;
+// เส้นทางจริงของผู้ใช้ทุกคนคือ browser -> Vercel (rewrite /api) -> Render เสมอ จึงเชื่อ x-vercel-forwarded-for เป็นหลัก
+// header นี้ Vercel ตั้งเองจาก connection ที่เข้ามาที่ edge ของมัน (ไม่ใช่ค่าที่ client ส่งมา และเป็น header สงวนของ Vercel)
+// ไม่ใช้ x-forwarded-for / x-real-ip เพราะ client ปลอมได้ และไม่ใช้ cf-connecting-ip เพราะทดสอบจริงแล้วเห็นเป็น IP ของ Vercel ไม่ใช่ผู้ใช้
+// ข้อจำกัด: ถ้ามีคนยิงตรงเข้า URL ของ Render โดยไม่ผ่าน Vercel จะตั้ง header นี้เองเป็นค่าอะไรก็ได้ (Render ไม่ตรวจ) จึง bypass IP limit ได้
+// ชั้นที่เหลือคือ throttle ต่อ identifier (ล็อก email/username ที่ล็อกอินผิด 5 ครั้ง) และ limit ต่อ email ใน DB ของ forgot-password
+//
+// คืน null เมื่ออ่าน IP ไม่ได้ (ไม่มี header หรือค่าไม่ใช่ IP ที่ถูกต้อง) เพื่อให้ผู้เรียก fail-open พร้อม warn
+// แทนการรวมทุกคนไว้ใน bucket เดียวกัน ค่าที่ไม่ใช่ IP ถูกปฏิเสธ กันเอา string ยาว ๆ มาสร้าง key ใน Redis
+export function getClientIp(vercelForwardedFor: string | undefined): string | null {
+  const value = vercelForwardedFor?.trim();
+  if (!value || isIP(value) === 0) return null;
+  return value;
 }
 
 // Fixed-window rate limit ต่อ IP เก็บตัวนับใน Redis (Upstash)
 export const ipRateLimit = (options: IpRateLimitOptions) =>
   createMiddleware(async (c, next) => {
-    const ip = getClientIp(
-      c.req.header("x-forwarded-for"),
-      getTrustedProxyHops(),
-    );
+    const ip = getClientIp(c.req.header("x-vercel-forwarded-for"));
 
     // Fail-open: อ่าน IP ไม่ได้ก็ข้าม rate limit ของ request นี้ (ยังมี limit ต่อ email ใน DB เป็นด่านสอง)
     if (!ip) {

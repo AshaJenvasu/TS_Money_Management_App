@@ -133,7 +133,7 @@ describe("GET /api/v1/assets/search-coins - hardening", () => {
   ) =>
     app.request(`/api/v1/assets/search-coins?q=${encodeURIComponent(q)}`, {
       method: "GET",
-      headers: { ...authHeader, ...(ip ? { "x-forwarded-for": ip } : {}) },
+      headers: { ...authHeader, ...(ip ? { "x-vercel-forwarded-for": ip } : {}) },
     });
 
   describe("max length of q", () => {
@@ -245,7 +245,7 @@ describe("GET /api/v1/assets/search-coins - hardening", () => {
     test("🔴 should return 401 (not consume the limit) when not logged in", async () => {
       const res = await app.request("/api/v1/assets/search-coins?q=bitcoin", {
         method: "GET",
-        headers: { "x-forwarded-for": "198.51.100.80" },
+        headers: { "x-vercel-forwarded-for": "198.51.100.80" },
       });
 
       expect(res.status).toBe(401);

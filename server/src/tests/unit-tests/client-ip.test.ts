@@ -1,36 +1,28 @@
 import { describe, test, expect } from "vitest";
 import { getClientIp } from "../../middlewares/rate-limit.middleware";
 
-describe("getClientIp", () => {
-  test("🟢 reads the entry N positions from the right (N = trusted proxy hops)", () => {
-    expect(getClientIp("203.0.113.9", 1)).toBe("203.0.113.9");
-    expect(getClientIp("203.0.113.9, 10.0.0.1", 1)).toBe("10.0.0.1");
-    expect(getClientIp("203.0.113.9, 10.0.0.1", 2)).toBe("203.0.113.9");
-    expect(getClientIp("a, 203.0.113.9, 10.0.0.1, 10.0.0.2", 3)).toBe(
-      "203.0.113.9",
-    );
+describe("getClientIp (x-vercel-forwarded-for)", () => {
+  test("🟢 returns the IPv4 or IPv6 address from the header", () => {
+    expect(getClientIp("203.0.113.9")).toBe("203.0.113.9");
+    expect(getClientIp("2001:db8::1")).toBe("2001:db8::1");
   });
 
-  test("🔴 ignores entries the client prepended on the left (spoofing)", () => {
-    expect(getClientIp("6.6.6.6, 203.0.113.9", 1)).toBe("203.0.113.9");
-    expect(getClientIp("6.6.6.6, 7.7.7.7, 203.0.113.9", 1)).toBe(
-      "203.0.113.9",
-    );
-    expect(getClientIp("6.6.6.6, 203.0.113.9, 10.0.0.1", 2)).toBe(
-      "203.0.113.9",
-    );
+  test("🟢 trims surrounding whitespace", () => {
+    expect(getClientIp("  203.0.113.9 ")).toBe("203.0.113.9");
   });
 
-  test("🟢 trims whitespace and skips empty entries", () => {
-    expect(getClientIp(" 6.6.6.6 ,, 203.0.113.9 ", 1)).toBe("203.0.113.9");
+  test("🔴 returns null when the header is missing or empty", () => {
+    expect(getClientIp(undefined)).toBeNull();
+    expect(getClientIp("")).toBeNull();
+    expect(getClientIp("   ")).toBeNull();
   });
 
-  test("🔴 returns null when the IP cannot be trusted or found", () => {
-    expect(getClientIp(undefined, 1)).toBeNull();
-    expect(getClientIp("", 1)).toBeNull();
-    // ไม่ได้ตั้ง hop (0) = ไม่เชื่อ header เลย
-    expect(getClientIp("203.0.113.9", 0)).toBeNull();
-    // entry น้อยกว่าจำนวน proxy ที่ควรผ่านมา = ไม่ได้ผ่าน chain ที่คาดไว้
-    expect(getClientIp("203.0.113.9", 2)).toBeNull();
+  test.each([
+    ["not an IP", "not-an-ip"],
+    ["a list of addresses", "6.6.6.6, 203.0.113.9"],
+    ["an address with a port", "203.0.113.9:8080"],
+    ["a very long string", "a".repeat(500)],
+  ])("🔴 returns null when the value is %s", (_name, value) => {
+    expect(getClientIp(value)).toBeNull();
   });
 });

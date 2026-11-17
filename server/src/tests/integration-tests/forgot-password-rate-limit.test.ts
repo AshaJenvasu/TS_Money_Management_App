@@ -14,13 +14,13 @@ vi.mock("../../utils/email", () => ({
   sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-// ไม่ส่ง ip = ไม่ใส่ header x-forwarded-for เลย (จำลองกรณีอ่าน IP ไม่ได้)
+// ไม่ส่ง ip = ไม่ใส่ header x-vercel-forwarded-for เลย (จำลองกรณีอ่าน IP ไม่ได้)
 function requestReset(email: string, ip?: string) {
   return app.request("/api/v1/auth/forgot-password", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(ip ? { "x-forwarded-for": ip } : {}),
+      ...(ip ? { "x-vercel-forwarded-for": ip } : {}),
     },
     body: JSON.stringify({ email }),
   });
@@ -104,7 +104,7 @@ describe("POST /api/v1/auth/forgot-password - per-IP rate limit", () => {
   });
 
   test("🔴 should skip the IP rate limit when the client IP cannot be determined", async () => {
-    // Arrange: ไม่มี x-forwarded-for และไม่มี x-real-ip ยิง 4 ครั้ง (ต่าง email)
+    // Arrange: ไม่มี x-vercel-forwarded-for ยิง 4 ครั้ง (ต่าง email)
     const emails = await createUsersWithEmails(4);
 
     // Act
