@@ -173,9 +173,9 @@ describe("Wallets Integration Tests", () => {
         },
       });
 
-      // Act: ใส่ .toString() ให้ targetWallet.id ชัดเจน
+      // Act: GET /:id ใช้ publicId (uuid) ไม่ใช่ id ตัวเลข
       const res = await app.request(
-        `/api/v1/wallets/${targetWallet.id.toString()}`,
+        `/api/v1/wallets/${targetWallet.publicId}`,
         {
           method: "GET",
           headers: { ...authHeaderA },
@@ -187,6 +187,8 @@ describe("Wallets Integration Tests", () => {
       // Assert
       expect(res.status).toBe(200);
       expect(body).toMatchObject({
+        id: targetWallet.id.toString(),
+        publicId: targetWallet.publicId,
         name: "[TEST] User A - Personal Wallet",
       });
     });
@@ -200,9 +202,9 @@ describe("Wallets Integration Tests", () => {
 
     test("🔴 Sad Path: should return 404 Not Found when wallet ID does not exist", async () => {
       const { authHeader } = await createTestUserWithToken();
-      const nonExistentId = "999999"; // ตัวเลข BigInt Valid ที่ไม่มีใน DB
+      const nonExistentPublicId = crypto.randomUUID(); // uuid สุ่ม ไม่มีใน DB
 
-      const res = await app.request(`/api/v1/wallets/${nonExistentId}`, {
+      const res = await app.request(`/api/v1/wallets/${nonExistentPublicId}`, {
         method: "GET",
         headers: { ...authHeader },
       });
@@ -221,9 +223,9 @@ describe("Wallets Integration Tests", () => {
 
       const { authHeader: authHeaderB } = await createTestUserWithToken();
 
-      // Act: ใส่ .toString() ให้ wallet ID ของ User A
+      // Act: ใช้ publicId ของ wallet User A
       const res = await app.request(
-        `/api/v1/wallets/${userAWallet.id.toString()}`,
+        `/api/v1/wallets/${userAWallet.publicId}`,
         {
           method: "GET",
           headers: { ...authHeaderB },

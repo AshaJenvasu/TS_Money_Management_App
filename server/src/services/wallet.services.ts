@@ -68,6 +68,7 @@ export class WalletService {
       ) {
         throw error;
       }
+      throw new Error("INTERNAL_SERVER_ERROR");
     }
   }
   // 3. Service: getWalletById

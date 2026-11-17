@@ -152,10 +152,11 @@ describe("WalletService Unit Tests", () => {
   describe("getWalletById()", () => {
     test("should return formatted wallet when wallet exists and belongs to user", async () => {
       // Arrange
-      const mockWalletId = 101n;
+      const mockPublicId = "550e8400-e29b-41d4-a716-446655440000";
       const mockUserId = 1n;
       const mockWalletFromDb = {
-        id: mockWalletId,
+        id: 101n,
+        publicId: mockPublicId,
         userId: mockUserId,
         name: "Main Wallet",
         createdAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -164,19 +165,20 @@ describe("WalletService Unit Tests", () => {
 
       // Mock: ค้นหาเจอ Wallet ใน DB
       const findByIdSpy = vi
-        .spyOn(WalletRepository, "findByIdAndUserId")
+        .spyOn(WalletRepository, "findByPublicIdAndUserId")
         .mockResolvedValue(mockWalletFromDb);
 
       // Act
       const result = await WalletService.getWalletById(
-        mockWalletId,
+        mockPublicId,
         mockUserId,
       );
 
       // Assert
-      expect(findByIdSpy).toHaveBeenCalledWith(mockWalletId, mockUserId);
+      expect(findByIdSpy).toHaveBeenCalledWith(mockPublicId, mockUserId);
       expect(result).toEqual({
         id: "101",
+        publicId: mockPublicId,
         name: "Main Wallet",
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
@@ -185,30 +187,30 @@ describe("WalletService Unit Tests", () => {
 
     test("should throw WALLET_NOT_FOUND error when wallet does not exist or user has no access", async () => {
       // Arrange
-      const mockWalletId = 999n;
+      const mockPublicId = "00000000-0000-4000-8000-000000000999";
       const mockUserId = 1n;
 
       // Mock: ค้นหาไม่เจอ (return null)
-      vi.spyOn(WalletRepository, "findByIdAndUserId").mockResolvedValue(null);
+      vi.spyOn(WalletRepository, "findByPublicIdAndUserId").mockResolvedValue(null);
 
       // Act & Assert
       await expect(
-        WalletService.getWalletById(mockWalletId, mockUserId),
+        WalletService.getWalletById(mockPublicId, mockUserId),
       ).rejects.toThrow("WALLET_NOT_FOUND");
     });
 
     test("should throw INTERNAL_SERVER_ERROR when repository fails", async () => {
       // Arrange
-      const mockWalletId = 101n;
+      const mockPublicId = "550e8400-e29b-41d4-a716-446655440000";
       const mockUserId = 1n;
 
-      vi.spyOn(WalletRepository, "findByIdAndUserId").mockRejectedValue(
+      vi.spyOn(WalletRepository, "findByPublicIdAndUserId").mockRejectedValue(
         new Error("Database connection lost"),
       );
 
       // Act & Assert
       await expect(
-        WalletService.getWalletById(mockWalletId, mockUserId),
+        WalletService.getWalletById(mockPublicId, mockUserId),
       ).rejects.toThrow("INTERNAL_SERVER_ERROR");
     });
   });
