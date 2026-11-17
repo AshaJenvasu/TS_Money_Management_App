@@ -1,34 +1,38 @@
 import pino from "pino";
 
+// path ที่ต้องซ่อนค่าใน Log (export เพื่อให้ test ตรวจว่าซ่อนจริง)
+export const LOG_REDACT_PATHS = [
+  // 1. Headers Level
+  "req.headers.cookie", // ซ่อน Cookie
+  "req.headers.authorization",
+  "req.headers['set-cookie']", // ซ่อน Response Cookie
+  "req.headers['x-internal-proxy-secret']", // secret ที่ Vercel แปะมาเพื่อยืนยันว่า request ผ่าน proxy จริง
+
+  // 2. Auth & Passwords
+  "password",
+  "*.password",
+  "*.passwordHash",
+  "*.confirmPassword",
+  "*.oldPassword",
+  "*.newPassword",
+
+  // 3. Tokens & Keys
+  "*.token",
+  "*.accessToken",
+  "*.refreshToken",
+  "*.secret",
+  "*.privateKey",
+  "*.publicKey",
+  "*set-cookie",
+];
+
 export const logger = pino({
   // กำหนดระดับ Log ขั้นต่ำที่จะให้แสดงผล (ถ้าไม่ระบุใน .env จะใช้ค่าเริ่มต้นเป็น 'info')
   level: process.env.LOG_LEVEL || "info",
 
   // 🔒 ซ่อนข้อมูล Sensitive ไม่ให้โผล่ใน Log
   redact: {
-    paths: [
-      // 1. Headers Level
-      "req.headers.cookie", // ซ่อน Cookie
-      "req.headers.authorization",
-      "req.headers['set-cookie']", // ซ่อน Response Cookie
-
-      // 2. Auth & Passwords
-      "password",
-      "*.password",
-      "*.passwordHash",
-      "*.confirmPassword",
-      "*.oldPassword",
-      "*.newPassword",
-
-      // 3. Tokens & Keys
-      "*.token",
-      "*.accessToken",
-      "*.refreshToken",
-      "*.secret",
-      "*.privateKey",
-      "*.publicKey",
-      "*set-cookie",
-    ],
+    paths: LOG_REDACT_PATHS,
     censor: "[REDACTED]", // ข้อความที่จะขึ้นแทนค่าที่ถูกซ่อน
   },
 

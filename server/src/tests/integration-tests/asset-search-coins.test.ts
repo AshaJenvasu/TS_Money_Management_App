@@ -2,6 +2,7 @@ import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import app from "../../index";
 import { createTestUserWithToken } from "../helpers/auth";
 import { fakeRedis } from "../helpers/fake-redis";
+import { proxyHeaders } from "../helpers/proxy-headers";
 
 // Redis (Upstash) เป็น external boundary: ใช้ in-memory fake ร่วมกับ test อื่น (cache ผลค้นหา + rate limit)
 vi.mock("../../config/redis", async () => ({
@@ -133,7 +134,7 @@ describe("GET /api/v1/assets/search-coins - hardening", () => {
   ) =>
     app.request(`/api/v1/assets/search-coins?q=${encodeURIComponent(q)}`, {
       method: "GET",
-      headers: { ...authHeader, ...(ip ? { "x-vercel-forwarded-for": ip } : {}) },
+      headers: { ...authHeader, ...(ip ? proxyHeaders(ip) : {}) },
     });
 
   describe("max length of q", () => {
@@ -245,7 +246,7 @@ describe("GET /api/v1/assets/search-coins - hardening", () => {
     test("🔴 should return 401 (not consume the limit) when not logged in", async () => {
       const res = await app.request("/api/v1/assets/search-coins?q=bitcoin", {
         method: "GET",
-        headers: { "x-vercel-forwarded-for": "198.51.100.80" },
+        headers: { ...proxyHeaders("198.51.100.80") },
       });
 
       expect(res.status).toBe(401);

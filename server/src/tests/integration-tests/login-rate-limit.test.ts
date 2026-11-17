@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import app from "../../index";
 import { prisma } from "../helpers/reset-db";
 import { fakeRedis } from "../helpers/fake-redis";
+import { proxyHeaders } from "../helpers/proxy-headers";
 
 // Redis (Upstash) เป็น external boundary: ใช้ in-memory fake ร่วมกับ test อื่น
 vi.mock("../../config/redis", async () => ({
@@ -35,7 +36,7 @@ function login(identifier: string, password: string, ip?: string) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(ip ? { "x-vercel-forwarded-for": ip } : {}),
+      ...(ip ? proxyHeaders(ip) : {}),
     },
     body: JSON.stringify({ identifier, password, rememberMe: false }),
   });
@@ -128,7 +129,7 @@ describe("POST /api/v1/auth/login - rate limit", () => {
         headers: {
           "Content-Type": "application/json",
           Origin: "http://localhost:5173",
-          "x-vercel-forwarded-for": ip,
+          ...proxyHeaders(ip),
         },
         body: JSON.stringify({
           identifier: "nobody@example.com",

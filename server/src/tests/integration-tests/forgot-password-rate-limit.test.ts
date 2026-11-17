@@ -3,6 +3,7 @@ import app from "../../index";
 import { createTestUserWithToken } from "../helpers/auth";
 import { sendPasswordResetEmail } from "../../utils/email";
 import { fakeRedis } from "../helpers/fake-redis";
+import { proxyHeaders } from "../helpers/proxy-headers";
 
 // Redis (Upstash) เป็น external boundary: ใช้ in-memory fake ร่วมกับ test อื่น (helpers/fake-redis.ts)
 vi.mock("../../config/redis", async () => ({
@@ -20,7 +21,7 @@ function requestReset(email: string, ip?: string) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(ip ? { "x-vercel-forwarded-for": ip } : {}),
+      ...(ip ? proxyHeaders(ip) : {}),
     },
     body: JSON.stringify({ email }),
   });
