@@ -137,3 +137,11 @@
 - ผลต่อ production: crypto asset เดิมจะมี `coingecko_id = null` ราคาขึ้น "ราคาไม่พร้อมใช้งาน" จนกว่าจะลบแล้วสร้างใหม่ (ยังไม่ได้ตรวจจำนวน asset บน production)
 - ยังไม่ได้ deploy โค้ด server/client ชุดใหม่ขึ้น production; โค้ดเวอร์ชันเก่าที่รันอยู่ไม่พังเพราะ column ใหม่ nullable ก่อน deploy โค้ดต้องตั้ง `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` บน env ของ Render
 - Prisma CLI แจ้งว่ามี major version ใหม่ (ไม่ได้อัปเกรด)
+
+## อัปเดต 2026-11-17 — แก้ wallets.test.ts ล้ม 6 ข้อ (ปิดข้อ (5) ใน "ยังเหลือ" ด้านบน)
+- commit `06fcad6` แยกจาก feature real-time price: เป็นบั๊กเก่าเดือน ต.ค. ไม่เกี่ยวกับ ticket 06 / `iat` ใน `helpers/auth.ts` (ตรวจแล้ว: ทั้ง 6 ข้อไม่มีข้อไหนได้ 401 และ `createTestUserWithToken` ไม่ตั้ง `passwordChangedAt` จึงไม่ชนกับเช็คใน `auth.middleware.ts`)
+- สาเหตุ A (test ค้าง): `c1c561c` (2026-10-21) เปลี่ยน GET `/wallets/:id` ให้ใช้ `publicId` (uuid) แต่ unit test ยัง mock `findByIdAndUserId` (service เรียก `findByPublicIdAndUserId` แล้วเลยหลุดไปหา DB จริงได้ `INTERNAL_SERVER_ERROR`) และ integration test ยังยิง `/wallets/<id ตัวเลข>` จึงได้ 400 จาก `WalletPublicIdParamSchema` — แก้ test ให้ใช้ `publicId`/uuid สุ่ม และ assert `publicId` ใน body
+- สาเหตุ B (บั๊กจริงใน production code): `496882f` (2026-10-15) ลบ `throw new Error("INTERNAL_SERVER_ERROR")` ท้าย `catch` ของ `WalletService.createWallet` ทำให้ error ที่ไม่ใช่ `WALLET_NAME_EXISTS`/`WALLET_LIMIT_REACHED` (เช่น DB ล่ม) ถูกกลืนแล้วคืน `undefined` — คืน throw แล้ว
+- ผล: `wallets.test.ts` unit+integration 42/42; ทั้งชุด server `--no-file-parallelism` **88/88 ผ่านหมด** (ตัวเลข 82/88 ใน section 2026-11-16 ด้านบนล้าสมัยแล้ว)
+- ข้อควรระวัง: ครั้งแรกที่รันพบว่า Docker Desktop/Postgres local (`localhost:5434`) ไม่ได้รัน ทำให้ทุก test พังที่ `cleanTestData()` ใน `setup.ts` (19/19 ใน unit wallets) — ต้องเปิด Postgres ก่อนรัน test เสมอ; `tsc` เคยรายงาน `publicId` ขาดใน `wallets.test.ts` ยังไม่ได้รัน `tsc` ซ้ำหลังแก้
+- ยังเหลือเหมือนเดิม ยกเว้นข้อ (5) ที่ปิดแล้ว
