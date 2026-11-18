@@ -15,6 +15,7 @@
 - ทดสอบ `client/vercel.json` (`routes` + secret header `x-internal-proxy-secret`) บน Vercel จริง: login (cookie), query string (`/api/v1/assets/search-coins?q=btc`), CORS; ต้องตั้ง `INTERNAL_PROXY_SECRET` ค่าเดียวกันบน Vercel และ Render — ยังไม่ได้ทดสอบ
 - Cloudflare error 1000 ("DNS points to prohibited IP") จาก `ts-money-management-app.onrender.com` ยังไม่ได้ตรวจสาเหตุ (อาจกระทบ API ทุกเส้นที่ผ่าน Vercel)
 - ทดสอบหน้า Investment/login บนเบราว์เซอร์จริงบน production, ข้อจาก grill-me ที่ยังไม่ตัดสินใจ, Quality Gate ที่เหลือ (code review, security review), rotate `INTERNAL_PROXY_SECRET` ยังไม่รองรับ — ดูข้อ 3-6 ใน "อัปเดต 2026-11-17 — E2E Playwright + สถานะก่อนปิด session"
+- รายการความเสี่ยงที่ตัดสินใจรับไว้/ยังไม่แก้ของฟีเจอร์นี้ทั้งหมดอยู่ที่ section "Known risks / Backlog (ยังไม่แก้ตอนนี้)" ท้ายไฟล์ — อย่าสืบหรือแก้ซ้ำโดยไม่จำเป็น
 - E2E (`client/e2e`) มี safety guard: ไม่รันถ้า `DATABASE_URL` หรือ `UPSTASH_REDIS_REST_URL` ไม่ใช่ host local เว้นแต่ตั้ง `E2E_ALLOW_SHARED_DATA=1` (ดู "อัปเดต 2026-11-18 — Review fixes")
 - dev/test ในเครื่องใช้ Redis local (SRH) แล้ว ไม่ใช่ Upstash production: ต้อง `docker compose up -d postgres redis serverless-redis-http` ใน `server/` ก่อนรัน test/e2e (ดู "อัปเดต 2026-11-18 — Redis local (SRH)")
 
@@ -236,10 +237,41 @@ docker compose up -d postgres redis serverless-redis-http
 
 **ทำไม:** เดิม dev กับ production ใช้ Upstash database ตัวเดียวกัน (free tier สร้างได้ 1 db) e2e ที่ลบ key `price:thb:bitcoin` และตัวนับ rate limit ตอน dev จึงกระทบ cache จริงบน production ตอนนี้ `server/.env` ชี้ `UPSTASH_REDIS_REST_URL=http://localhost:8079` ไปที่ Redis local ผ่าน SRH (REST API แบบเดียวกับ Upstash) โค้ด server (`@upstash/redis`) ไม่ต้องแก้
 
-- commit/ไฟล์: `server/docker-compose.yml` เพิ่ม `redis` (`redis/redis-stack-server:6.2.6-v6`, ไม่ publish port) และ `serverless-redis-http` (`hiett/serverless-redis-http:latest`, `8079:80`, `SRH_MODE=env`, `SRH_CONNECTION_STRING=redis://redis:6379`); พอร์ตไม่ชน Postgres (`5434`)
+- commit/ไฟล์: `server/docker-compose.yml` เพิ่ม `redis` (`redis/redis-stack-server:6.2.6-v6`, ไม่ publish port) และ `serverless-redis-http` (`hiett/serverless-redis-http:latest`, `127.0.0.1:8079:80` (แก้จาก `8079:80` ดู section ท้ายไฟล์), `SRH_MODE=env`, `SRH_CONNECTION_STRING=redis://redis:6379`); พอร์ตไม่ชน Postgres (`5434`)
 - token: `SRH_TOKEN` อยู่ใน `server/.env` (gitignored, random ใหม่ ใช้แค่ในเครื่อง) ค่าเดียวกับ `UPSTASH_REDIS_REST_TOKEN`; compose อ่านผ่าน `${SRH_TOKEN}` ไม่ได้ hardcode ในไฟล์ที่ commit; ไม่ได้แตะ env บน Render (production ยังใช้ Upstash จริง)
 - guard ใน e2e spec (`assertSafeToRun`) ตรวจ host ของทั้ง `DATABASE_URL` และ `UPSTASH_REDIS_REST_URL`: ถ้าตัวใดไม่ใช่ `localhost`/`127.0.0.1`/`::1` (หรืออ่านไม่ได้/ไม่มีค่า) และไม่ได้ตั้ง `E2E_ALLOW_SHARED_DATA=1` จะปฏิเสธรันทันทีพร้อมข้อความระบุว่าตัวไหนผิด (ไม่พิมพ์ URL เต็ม) — ทดสอบแล้วว่าปฏิเสธเมื่อ `UPSTASH_REDIS_REST_URL=https://fake-prod.upstash.io`; ถ้าย้อนไปชี้ Upstash จริงใน `.env` e2e จะไม่รัน
 - ข้อจำกัดของ SRH ที่เจอ: รับคำสั่งเป็น JSON body (POST) เท่านั้น ไม่รองรับ URL path แบบ `GET /del/<key>` (ตอบ 404 `SRH: Endpoint not found`) และไม่มี `/ping`; ผลคือ helper `upstash()` ใน `client/e2e/investment-price.spec.ts` เปลี่ยนเป็น `POST` + `["DEL", key]` (ใช้ได้ทั้ง SRH และ Upstash จริง) — `@upstash/redis` ฝั่ง server ใช้ POST อยู่แล้ว จึงไม่ต้องแก้
 - ผลที่รันจริง (Redis local): server `vitest run --no-file-parallelism` 137/137, client vitest 14/14, client `tsc -b` ผ่าน, `bun run e2e` 1 passed (~9s) และเห็น key `price:thb:bitcoin` (TTL ~118s) + `ratelimit:login-email:test_e2e_*` อยู่ใน Redis local จริง ไม่ค้างใน production; ไม่มี user `test_e2e_%` ค้างใน DB
 - ข้อควรระวัง: Redis local ไม่มี volume = ข้อมูลหายเมื่อ container ถูกลบ (ไม่เป็นปัญหาสำหรับ cache/rate limit); ตัวนับ rate limit ค้างข้ามรอบ e2e ได้ ล้างด้วย `docker compose exec redis redis-cli flushall`
 - ค้าง: ยังไม่ได้ commit (รอ user ตรวจ); ไฟล์ backup `.env` เดิมใน temp folder ถูกลบแล้วตามที่ user สั่ง (ค่า production Upstash จริงอยู่บน Render)
+
+## อัปเดต 2026-11-18 — SRH bind loopback + ADR-0002
+
+- **Security review (`/security-review` บน `ec12e98..HEAD`):** ไม่พบช่องโหว่ระดับที่ต้องแก้ มี hardening note เดียวที่นำมาทำ: `serverless-redis-http` เดิม bind ทุก interface (`8079:80`)
+- **แก้แล้ว (ยังไม่ commit):** `server/docker-compose.yml` เปลี่ยนเป็น `127.0.0.1:8079:80`; recreate container แล้วตรวจ: `docker compose ps` แสดง `127.0.0.1:8079->80/tcp`, `localhost:8079` ตอบ `PONG`, ยิงผ่าน IP LAN (`192.168.1.8:8079`) ต่อไม่ได้ (http 000); `bun run e2e` ผ่าน 1/1
+- **ADR:** เขียน `docs/adr/ADR-0002-realtime-price-supersedes-manual-prices.md` (supersede การตัดสินใจ "No real-time asset price fetching", บันทึก prod = Upstash / dev = Redis local + SRH พร้อมเหตุผล) และเพิ่มลิงก์ใน Status ของ `ADR-0001` **ข้อควรระวัง:** ไฟล์ ADR เดิม "No real-time asset price fetching" ไม่มีอยู่ใน repo เลย (ไม่อยู่ใน `docs/adr/` ไม่พบใน git history) มีแค่ข้อความอ้างถึงใน ADR-0001 จึงไม่ได้แก้สถานะไฟล์เดิม
+- **ข้อสังเกตนอก scope:** Postgres ใน compose เคย publish `0.0.0.0:5434` (bind ทุก interface) — แก้แล้วในงานถัดมาวันเดียวกัน ดู section "Postgres bind loopback" ท้ายไฟล์
+- **ค้าง:** ยังไม่ได้ commit (รอ user ตรวจ)
+
+## อัปเดต 2026-11-18 — Postgres bind loopback
+
+- `server/docker-compose.yml`: port ของ `postgres` เปลี่ยนจาก `"${DB_PORT}:5432"` เป็น `"127.0.0.1:${DB_PORT}:5432"` (เหตุผลเดียวกับ SRH: กันเครื่องอื่นใน network เดียวกันเข้า DB ตรงๆ)
+- ตรวจแล้ว: `docker compose ps` แสดง `127.0.0.1:5434->5432/tcp`; `localhost:5434` ต่อได้; ยิงผ่าน IP LAN (`192.168.1.8:5434`) ถูก refuse
+- ข้อควรระวัง: service `postgres` ไม่มี named volume (ข้อมูลอยู่ใน anonymous volume) การ recreate container ด้วย `docker compose up -d` Compose เก็บ volume เดิมไว้ ข้อมูล dev ไม่หาย (ตรวจแล้ว: volume id เดิม, users ยัง 1 แถว) แต่ `docker compose down -v` หรือ `docker volume prune` จะลบข้อมูล dev DB ทิ้ง; ก่อน recreate ได้ทำ `pg_dump` เก็บใน temp ไว้กันเหนียว และลบทิ้งหลังยืนยันแล้ว
+- ผลที่รันจริงหลังแก้: server `vitest run --no-file-parallelism` 137/137, client vitest 14/14, `bun run e2e` 1 passed, ไม่มี user `test_e2e_%` ค้าง
+- ค้าง: ยังไม่ได้ commit (รอ user ตรวจ)
+
+## Known risks / Backlog (ยังไม่แก้ตอนนี้)
+
+รายการที่ตัดสินใจ **รับความเสี่ยงไว้ก่อน** สำหรับฟีเจอร์ Real-time price + Redis (ตัดสินใจ 2026-11-18 เพราะเป็น personal project ผลกระทบต่ำ) session ถัดไปไม่ต้องสืบหรือแก้ซ้ำ เว้นแต่ context เปลี่ยน (เช่น เปิดให้ผู้ใช้จริงจำนวนมาก)
+
+**จาก grill-me** (เลขข้อตามรายการ grill-me ในรอบ 2026-11-17; ดูบริบทที่ "แก้ 7 ข้อจากผล grill-me")
+- **#2** Redis ล่ม/โควตา Upstash หมด → rate limit ทุกจุด (ip rate limit, login throttle, forgot-password) หยุดทำงานไปด้วย (fail-open ทุกชั้น) — ผลกระทบต่ำ (personal project)
+- **#4** `forgot-password` ยัง enumerate ได้ว่า email มีในระบบหรือไม่ ผ่านเวลาตอบ/429/500 — ผลกระทบต่ำ (personal project)
+- **#7** identifier throttle ของ login นับ email กับ username แยกถังตามข้อความที่พิมพ์ (คนเดียวกันสลับพิมพ์ได้ 2 เท่า) — ความเสี่ยงต่ำ
+- **#8, #9** ความทนทานของ price cache: Redis ล่มทำให้ราคาหายทั้งที่ CoinGecko ใช้ได้, cache stampede/staleness (หลาย request พร้อมกันตอน cache หมดอายุ ยิง CoinGecko ซ้ำ; ราคาเก่าได้สูงสุด 120 วินาที) — ความเสี่ยงต่ำ
+- **#12-#14** เรื่องเล็กน้อย — ความเสี่ยงต่ำ (รายละเอียดแต่ละข้อไม่ได้บันทึกไว้ใน repo นี้ ถ้าจะทำต้องกลับไปดูผล grill-me ต้นฉบับ)
+
+**จาก security review (`/security-review` 2026-11-18 บน `ec12e98..HEAD`: ไม่พบช่องโหว่ที่ต้องแก้)**
+- image `hiett/serverless-redis-http:latest` ใน `server/docker-compose.yml` ไม่ pin เวอร์ชัน — supply-chain hardening เฉยๆ (ใช้เฉพาะ dev)
+- E2E guard (`client/e2e/investment-price.spec.ts`, `assertSafeToRun`) ยังไม่ครอบกรณี URL มี query-string ซ่อน host อื่น (เช่น `DATABASE_URL` ที่มี `?host=remote`) — ต้องคุม env ได้ก่อนถึงจะใช้ประโยชน์ได้

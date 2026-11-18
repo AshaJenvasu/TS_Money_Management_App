@@ -1,6 +1,6 @@
 # ADR-0001: Real-time Crypto Price Caching ผ่าน Upstash Redis
 
-**Status:** Accepted
+**Status:** Accepted (ข้อ 1 ประโยค "ADR เดิม ... ยังไม่ถูกยกเลิก" และข้อ 5 ถูกแก้โดย [ADR-0002](ADR-0002-realtime-price-supersedes-manual-prices.md))
 
 ## Context
 
