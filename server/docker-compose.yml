@@ -9,6 +9,27 @@ services:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_DB=${DB_NAME}
 
+  # Redis local สำหรับ dev/test (แยกจาก Upstash production) — ไม่ publish port ออก host
+  redis:
+    image: redis/redis-stack-server:6.2.6-v6
+    restart: unless-stopped
+    expose:
+      - "6379"
+
+  # SRH: ให้ Redis local คุยผ่าน REST API แบบเดียวกับ Upstash (@upstash/redis ใช้ได้เลย)
+  # SRH_TOKEN อ่านจาก server/.env (ต้องตรงกับ UPSTASH_REDIS_REST_TOKEN)
+  serverless-redis-http:
+    image: hiett/serverless-redis-http:latest
+    restart: unless-stopped
+    ports:
+      - "8079:80"
+    environment:
+      - SRH_MODE=env
+      - SRH_TOKEN=${SRH_TOKEN:?ตั้ง SRH_TOKEN ใน server/.env}
+      - SRH_CONNECTION_STRING=redis://redis:6379
+    depends_on:
+      - redis
+
   server:
     build: .
     image: ashachaiyawat/server:latest

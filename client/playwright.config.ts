@@ -4,7 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
 // Vite proxy /api ไป backend อยู่แล้ว (vite.config.ts) จึงยิงผ่าน baseURL ของ frontend ทั้ง UI และ API
 // ต้องมี Postgres (docker compose up -d postgres) และ server/.env ที่ตั้ง UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN
 // (หรือส่งเป็น env ของ process ก็ได้ — process.env มาก่อนไฟล์)
-// Safety: test จะไม่รันถ้า DATABASE_URL ไม่ใช่ host local เว้นแต่ตั้ง E2E_ALLOW_SHARED_DATA=1 (ดู e2e/investment-price.spec.ts)
+// Safety: test จะไม่รันถ้า DATABASE_URL หรือ UPSTASH_REDIS_REST_URL ไม่ใช่ host local เว้นแต่ตั้ง E2E_ALLOW_SHARED_DATA=1 (ดู e2e/investment-price.spec.ts)
 export default defineConfig({
   testDir: "./e2e",
   // ใช้ DB เดียวกับ dev จึงรันทีละ test

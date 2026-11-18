@@ -15,7 +15,8 @@
 - ทดสอบ `client/vercel.json` (`routes` + secret header `x-internal-proxy-secret`) บน Vercel จริง: login (cookie), query string (`/api/v1/assets/search-coins?q=btc`), CORS; ต้องตั้ง `INTERNAL_PROXY_SECRET` ค่าเดียวกันบน Vercel และ Render — ยังไม่ได้ทดสอบ
 - Cloudflare error 1000 ("DNS points to prohibited IP") จาก `ts-money-management-app.onrender.com` ยังไม่ได้ตรวจสาเหตุ (อาจกระทบ API ทุกเส้นที่ผ่าน Vercel)
 - ทดสอบหน้า Investment/login บนเบราว์เซอร์จริงบน production, ข้อจาก grill-me ที่ยังไม่ตัดสินใจ, Quality Gate ที่เหลือ (code review, security review), rotate `INTERNAL_PROXY_SECRET` ยังไม่รองรับ — ดูข้อ 3-6 ใน "อัปเดต 2026-11-17 — E2E Playwright + สถานะก่อนปิด session"
-- E2E (`client/e2e`) มี safety guard: ไม่รันถ้า `DATABASE_URL` ไม่ใช่ host local เว้นแต่ตั้ง `E2E_ALLOW_SHARED_DATA=1` (ดู "อัปเดต 2026-11-18 — Review fixes")
+- E2E (`client/e2e`) มี safety guard: ไม่รันถ้า `DATABASE_URL` หรือ `UPSTASH_REDIS_REST_URL` ไม่ใช่ host local เว้นแต่ตั้ง `E2E_ALLOW_SHARED_DATA=1` (ดู "อัปเดต 2026-11-18 — Review fixes")
+- dev/test ในเครื่องใช้ Redis local (SRH) แล้ว ไม่ใช่ Upstash production: ต้อง `docker compose up -d postgres redis serverless-redis-http` ใน `server/` ก่อนรัน test/e2e (ดู "อัปเดต 2026-11-18 — Redis local (SRH)")
 
 ## Decisions ที่ตกลงแล้ว
 - Test seams: integration test ที่ `GET /api/v1/portfolio` ผ่าน `app.request` (DB จริง) mock เฉพาะ Redis และ CoinGecko
@@ -220,4 +221,25 @@
   - server `vitest run --no-file-parallelism`: รอบแรกรันไม่ได้ (Docker ปิด) แต่เปิด Docker แล้วรันซ้ำในรอบเดียวกัน: **137/137 ผ่าน** (13 ไฟล์)
   - `bun run e2e` รัน 1 รอบหลังแก้ spec: **1 passed** (login -> Investment page แสดงราคาผ่าน Redis cache, ~20s) และตรวจ DB หลังรัน: ไม่มี user `test_e2e_%` ค้าง (cleanup ทำงาน)
   - server `tsc` ไม่ได้รันซ้ำ
-- ข้อควรระวัง: guard ตรวจเฉพาะ host ของ `DATABASE_URL` ไม่ได้ตรวจว่า Upstash เป็น instance แยกของ dev; key ที่ลบคือ `price:thb:bitcoin` เท่านั้น
+- ข้อควรระวัง: (แก้ภายหลังในวันเดียวกัน) guard ตรวจ host ของทั้ง `DATABASE_URL` และ `UPSTASH_REDIS_REST_URL` แล้ว ดู "อัปเดต 2026-11-18 — Redis local (SRH)"; key ที่ลบคือ `price:thb:bitcoin` เท่านั้น
+
+## อัปเดต 2026-11-18 — Redis local (SRH) แยกจาก Upstash production
+
+**ต่อไปนี้ dev ต้องเปิดทั้ง Postgres และ Redis (SRH) ก่อนรัน test/e2e ในเครื่อง:**
+
+```
+cd server
+docker compose up -d postgres redis serverless-redis-http
+```
+
+(ห้ามใช้ `docker compose up` เฉยๆ เพราะจะ start service `server` ด้วย ซึ่ง container นั้นเข้าถึง `localhost:5434`/`localhost:8079` ของเครื่องไม่ได้ — เป็นปัญหาเดิมของ service นี้ ไม่ได้แก้)
+
+**ทำไม:** เดิม dev กับ production ใช้ Upstash database ตัวเดียวกัน (free tier สร้างได้ 1 db) e2e ที่ลบ key `price:thb:bitcoin` และตัวนับ rate limit ตอน dev จึงกระทบ cache จริงบน production ตอนนี้ `server/.env` ชี้ `UPSTASH_REDIS_REST_URL=http://localhost:8079` ไปที่ Redis local ผ่าน SRH (REST API แบบเดียวกับ Upstash) โค้ด server (`@upstash/redis`) ไม่ต้องแก้
+
+- commit/ไฟล์: `server/docker-compose.yml` เพิ่ม `redis` (`redis/redis-stack-server:6.2.6-v6`, ไม่ publish port) และ `serverless-redis-http` (`hiett/serverless-redis-http:latest`, `8079:80`, `SRH_MODE=env`, `SRH_CONNECTION_STRING=redis://redis:6379`); พอร์ตไม่ชน Postgres (`5434`)
+- token: `SRH_TOKEN` อยู่ใน `server/.env` (gitignored, random ใหม่ ใช้แค่ในเครื่อง) ค่าเดียวกับ `UPSTASH_REDIS_REST_TOKEN`; compose อ่านผ่าน `${SRH_TOKEN}` ไม่ได้ hardcode ในไฟล์ที่ commit; ไม่ได้แตะ env บน Render (production ยังใช้ Upstash จริง)
+- guard ใน e2e spec (`assertSafeToRun`) ตรวจ host ของทั้ง `DATABASE_URL` และ `UPSTASH_REDIS_REST_URL`: ถ้าตัวใดไม่ใช่ `localhost`/`127.0.0.1`/`::1` (หรืออ่านไม่ได้/ไม่มีค่า) และไม่ได้ตั้ง `E2E_ALLOW_SHARED_DATA=1` จะปฏิเสธรันทันทีพร้อมข้อความระบุว่าตัวไหนผิด (ไม่พิมพ์ URL เต็ม) — ทดสอบแล้วว่าปฏิเสธเมื่อ `UPSTASH_REDIS_REST_URL=https://fake-prod.upstash.io`; ถ้าย้อนไปชี้ Upstash จริงใน `.env` e2e จะไม่รัน
+- ข้อจำกัดของ SRH ที่เจอ: รับคำสั่งเป็น JSON body (POST) เท่านั้น ไม่รองรับ URL path แบบ `GET /del/<key>` (ตอบ 404 `SRH: Endpoint not found`) และไม่มี `/ping`; ผลคือ helper `upstash()` ใน `client/e2e/investment-price.spec.ts` เปลี่ยนเป็น `POST` + `["DEL", key]` (ใช้ได้ทั้ง SRH และ Upstash จริง) — `@upstash/redis` ฝั่ง server ใช้ POST อยู่แล้ว จึงไม่ต้องแก้
+- ผลที่รันจริง (Redis local): server `vitest run --no-file-parallelism` 137/137, client vitest 14/14, client `tsc -b` ผ่าน, `bun run e2e` 1 passed (~9s) และเห็น key `price:thb:bitcoin` (TTL ~118s) + `ratelimit:login-email:test_e2e_*` อยู่ใน Redis local จริง ไม่ค้างใน production; ไม่มี user `test_e2e_%` ค้างใน DB
+- ข้อควรระวัง: Redis local ไม่มี volume = ข้อมูลหายเมื่อ container ถูกลบ (ไม่เป็นปัญหาสำหรับ cache/rate limit); ตัวนับ rate limit ค้างข้ามรอบ e2e ได้ ล้างด้วย `docker compose exec redis redis-cli flushall`
+- ค้าง: ยังไม่ได้ commit (รอ user ตรวจ); ไฟล์ backup `.env` เดิมใน temp folder ถูกลบแล้วตามที่ user สั่ง (ค่า production Upstash จริงอยู่บน Render)

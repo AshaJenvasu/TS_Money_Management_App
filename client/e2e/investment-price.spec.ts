@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 // และลบ user ทิ้งตอนจบ (อีเมลขึ้นต้น test_ เพื่อให้ cleanTestData ของ vitest ลบให้ด้วยถ้ารอบไหนค้าง)
 // ส่วนราคาต้องมาจาก CoinGecko และ Redis จริง ไม่ mock: ถ้าเน็ตหรือ CoinGecko มีปัญหา test นี้จะล้ม
 //
-// Safety: test นี้ลบ key ใน Redis และสร้าง/ลบ user จริง จึงไม่ยอมรันถ้า DATABASE_URL ไม่ใช่ host local
+// Safety: test นี้ลบ key ใน Redis และสร้าง/ลบ user จริง จึงไม่ยอมรันถ้า DATABASE_URL หรือ UPSTASH_REDIS_REST_URL ไม่ใช่ host local
 // เว้นแต่ตั้ง E2E_ALLOW_SHARED_DATA=1 (ดู assertSafeToRun ด้านล่าง)
 
 // ต้องตรงกับ server/src/services/price.provider.ts: key = `price:${PRICE_CURRENCY}:${coingeckoId}` และ PRICE_CACHE_TTL_SECONDS
@@ -23,7 +23,7 @@ const COIN_ID = "bitcoin";
 const PRICE_CACHE_KEY = `price:${PRICE_CURRENCY}:${COIN_ID}`;
 
 const ALLOW_SHARED_DATA_FLAG = "E2E_ALLOW_SHARED_DATA";
-const LOCAL_DB_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
 type GetEnv = (name: string) => string | undefined;
 
@@ -56,21 +56,36 @@ function readUpstashConfig(getEnv: GetEnv): { url: string; token: string } | nul
   return url && token ? { url: url.replace(/\/$/, ""), token } : null;
 }
 
-// โยน error ถ้า DB ไม่ใช่ local และไม่ได้ opt-in (ไม่พิมพ์ DATABASE_URL เพราะมี credential)
+// อ่านเฉพาะ host จาก URL (ไม่พิมพ์ URL เต็มเพราะ DATABASE_URL มี credential); อ่านไม่ได้/ไม่มีค่า = null
+function hostOf(rawUrl: string | undefined): string | null {
+  try {
+    return rawUrl ? new URL(rawUrl).hostname : null;
+  } catch {
+    return null;
+  }
+}
+
+// โยน error ถ้า DB หรือ Redis ตัวใดตัวหนึ่งไม่ใช่ local และไม่ได้ opt-in ด้วย E2E_ALLOW_SHARED_DATA=1
+// เช็คทั้งสองตัวแล้วรายงานครบในข้อความเดียว (host ที่ไม่ใช่ local / ไม่พบ / อ่านไม่ได้ ถือว่าไม่ปลอดภัยหมด)
 function assertSafeToRun(getEnv: GetEnv): void {
   if (getEnv(ALLOW_SHARED_DATA_FLAG) === "1") return;
-  const databaseUrl = getEnv("DATABASE_URL");
-  let host: string | null;
-  try {
-    host = databaseUrl ? new URL(databaseUrl).hostname : null;
-  } catch {
-    host = null;
-  }
-  if (host === null || !LOCAL_DB_HOSTS.has(host)) {
+  const targets = [
+    { name: "DATABASE_URL", what: "สร้าง/ลบ user ใน DB", host: hostOf(getEnv("DATABASE_URL")) },
+    {
+      name: "UPSTASH_REDIS_REST_URL",
+      what: `ลบ key ${PRICE_CACHE_KEY} และเขียน cache/ตัวนับ rate limit ใน Redis`,
+      host: hostOf(getEnv("UPSTASH_REDIS_REST_URL")),
+    },
+  ];
+  const unsafe = targets.filter((t) => t.host === null || !LOCAL_HOSTS.has(t.host));
+  if (unsafe.length > 0) {
+    const detail = unsafe
+      .map((t) => `- ${t.name} ไม่ใช่ host local (host: ${t.host ?? "ไม่พบ/อ่านไม่ได้"}) แต่ test นี้ต้อง${t.what} จริง`)
+      .join("\n");
     throw new Error(
-      `E2E ปฏิเสธที่จะรัน: DATABASE_URL ไม่ใช่ host local (host: ${host ?? "ไม่พบ/อ่านไม่ได้"}). ` +
-        `test นี้สร้าง/ลบ user และลบ key ${PRICE_CACHE_KEY} ใน Redis จริง ` +
-        `ถ้าแน่ใจว่ายอมให้ทำกับ DB และ Upstash ชุดนี้ ให้ตั้ง ${ALLOW_SHARED_DATA_FLAG}=1`,
+      `E2E ปฏิเสธที่จะรัน เพราะอาจไปกระทบข้อมูลจริง:\n${detail}\n` +
+        `ถ้าเป็นเครื่อง dev ให้ชี้ไป DB/Redis local (docker compose up -d postgres redis serverless-redis-http ใน server/) ` +
+        `หรือถ้าแน่ใจว่ายอมให้ทำกับชุดข้อมูลนี้จริงๆ ให้ตั้ง ${ALLOW_SHARED_DATA_FLAG}=1`,
     );
   }
 }
@@ -85,14 +100,20 @@ function expectStatus(response: APIResponse, expected: number, step: string): vo
   expect(status, `${step}: ต้องได้ ${expected} แต่ได้ ${status}${hint}`).toBe(expected);
 }
 
+// ส่งคำสั่งเป็น JSON body (POST) เพราะ SRH (Redis local) ไม่รองรับรูปแบบ URL path เช่น /del/key — Upstash จริงรองรับทั้งสองแบบ
 async function upstash(
   config: { url: string; token: string },
-  command: string,
+  command: string[],
 ): Promise<unknown> {
-  const response = await fetch(`${config.url}/${command}`, {
-    headers: { Authorization: `Bearer ${config.token}` },
+  const response = await fetch(config.url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(command),
   });
-  expect(response.ok, `Upstash ${command.split("/")[0]} failed`).toBe(true);
+  expect(response.ok, `Redis ${command[0]} failed`).toBe(true);
   return ((await response.json()) as { result: unknown }).result;
 }
 
@@ -115,7 +136,7 @@ test("login -> Investment page shows the live crypto price served through the Re
   const username = `test_e2e_${unique}`;
 
   // ลบราคา BTC ที่ค้างใน cache ก่อน เพื่อให้ราคาที่เห็นมาจากการดึง CoinGecko จริงรอบนี้แล้วถูกเก็บลง Redis
-  await upstash(redis, `del/${encodeURIComponent(PRICE_CACHE_KEY)}`);
+  await upstash(redis, ["DEL", PRICE_CACHE_KEY]);
 
   // register อยู่ใน try เพื่อให้ finally ลบ user เสมอแม้ register/expect ล้ม (ถ้ายังไม่ได้ login การลบไม่ทำอะไร)
   try {
@@ -202,12 +223,12 @@ test("login -> Investment page shows the live crypto price served through the Re
     // 5) Assert ที่ Redis จริง: key ราคาถูก server เขียน (เราลบทิ้งไว้ก่อนเริ่ม) และมี TTL ตาม cache
     // ตรวจแค่ว่า key มีอยู่และ TTL อยู่ในช่วง ไม่เทียบค่ากับ UI
     const exists = Number(
-      await upstash(redis, `exists/${encodeURIComponent(PRICE_CACHE_KEY)}`),
+      await upstash(redis, ["EXISTS", PRICE_CACHE_KEY]),
     );
     expect(exists, `key ${PRICE_CACHE_KEY} ต้องถูก server เขียนลง Redis`).toBe(1);
 
     const ttl = Number(
-      await upstash(redis, `ttl/${encodeURIComponent(PRICE_CACHE_KEY)}`),
+      await upstash(redis, ["TTL", PRICE_CACHE_KEY]),
     );
     expect(ttl).toBeGreaterThan(0);
     expect(ttl).toBeLessThanOrEqual(PRICE_CACHE_TTL_SECONDS);
