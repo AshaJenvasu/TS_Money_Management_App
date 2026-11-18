@@ -51,17 +51,27 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
     // 3. สร้าง User ผ่าน UserRepository
-    const newUser = await prisma.$transaction(async (tx) => {
-      const newUser = await UserRepository.createUser(tx, {
-        email: data.email,
-        username: data.username,
-        passwordHash: hashedPassword,
+    let newUser;
+    try {
+      newUser = await prisma.$transaction(async (tx) => {
+        const created = await UserRepository.createUser(tx, {
+          email: data.email,
+          username: data.username,
+          passwordHash: hashedPassword,
+        });
+
+        await PortfolioRepository.createPortfolio(tx, created.id);
+
+        return created;
       });
-
-      await PortfolioRepository.createPortfolio(tx, newUser.id);
-
-      return newUser;
-    });
+    } catch (error: any) {
+      // กันเคส race condition: สมัครด้วย email/username เดียวกันพร้อมกัน ทั้งสองผ่านการเช็คข้างบนได้
+      // แล้วชน unique constraint ที่ DB (Prisma โยน P2002) ต้องตอบ error เดียวกับเคสซ้ำปกติ ไม่ใช่ 500
+      if (error?.code === "P2002") {
+        throw new Error("EMAIL_OR_USERNAME_EXISTS");
+      }
+      throw error;
+    }
 
     return {
       id: newUser.id.toString(),

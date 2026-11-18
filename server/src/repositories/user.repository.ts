@@ -1,19 +1,25 @@
 import { prisma, type DbClient } from "../config/prisma.js";
 import { Prisma } from "@prisma/client";
 
+// Email เก็บเป็นตัวพิมพ์เล็กเสมอ (Zod normalize ตอนรับค่า) ส่วน Username เก็บตัวพิมพ์ตามที่ user ตั้ง
+// การเทียบ username ต้องไม่สนตัวพิมพ์: เทียบผ่าน usernameLower (= lower(username) ที่ DB คำนวณให้และมี unique index)
+// ทุก query ที่ค้นด้วย username ต้องผ่าน helper นี้ ห้ามเทียบกับคอลัมน์ username ตรงๆ
+const toLookupKey = (value: string) => value.trim().toLowerCase();
+
 export class UserRepository {
-  // ค้นหา User จาก Email หรือ Username
+  // ค้นหา User จาก Email หรือ Username (username ไม่สนตัวพิมพ์)
   static async findByEmailOrUsername(email: string, username: string) {
     return await prisma.user.findFirst({
       where: {
-        OR: [{ email }, { username }],
+        OR: [{ email }, { usernameLower: toLookupKey(username) }],
       },
     });
   }
 
+  // ค้นหาแบบไม่สนตัวพิมพ์ ("Asha", "asha", "ASHA" คืนแถวเดียวกัน)
   static async findByUsername(username: string, db: DbClient = prisma) {
     return await db.user.findUnique({
-      where: { username },
+      where: { usernameLower: toLookupKey(username) },
     });
   }
 
@@ -30,11 +36,12 @@ export class UserRepository {
       where: { id },
     });
   }
-  // ค้นหา User จาก Identifier (Email หรือ Username) สำหรับ Login
+  // ค้นหา User จาก Identifier (Email หรือ Username) สำหรับ Login: ทั้งสองฝั่งไม่สนตัวพิมพ์
   static async findByIdentifier(identifier: string) {
+    const key = toLookupKey(identifier);
     return await prisma.user.findFirst({
       where: {
-        OR: [{ email: identifier }, { username: identifier }],
+        OR: [{ email: key }, { usernameLower: key }],
       },
     });
   }

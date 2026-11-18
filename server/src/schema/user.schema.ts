@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { strongPasswordSchema } from "./auth.schema.js";
+import { normalizedEmailSchema, strongPasswordSchema } from "./auth.schema.js";
 
 // 1. นิยาม Zod Schema สำหรับ Request Params (รับ id จาก path)
 export const UserParamsSchema = z.object({
@@ -29,6 +29,7 @@ export const UserResponseSchema = z.object({
 export const UpdateUsernameBodySchema = z.object({
   username: z
     .string()
+    .trim()
     .min(3, "Username ต้องมีอย่างน้อย 3 ตัวอักษร")
     .max(20, "Username ต้องไม่เกิน 20 ตัวอักษร")
     .regex(
@@ -40,7 +41,7 @@ export const UpdateUsernameBodySchema = z.object({
 
 // นิยาม Zod Schema สำหรับ Body ตอนเปลี่ยน Email ของตัวเอง ต้องแนบ current password มายืนยันด้วย
 export const UpdateEmailBodySchema = z.object({
-  email: z.string().email("รูปแบบ Email ไม่ถูกต้อง").openapi({
+  email: normalizedEmailSchema("รูปแบบ Email ไม่ถูกต้อง").openapi({
     example: "new_email@example.com",
   }),
   currentPassword: z

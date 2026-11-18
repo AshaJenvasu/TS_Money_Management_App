@@ -209,6 +209,10 @@ export function RegisterForm() {
                   onChange={(e) => setUsername(e.target.value)}
                   iconId="i-user"
                   error={errors.username}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  autoComplete="username"
                 />
 
                 <InputField
@@ -218,6 +222,10 @@ export function RegisterForm() {
                   onChange={(e) => setEmail(e.target.value)}
                   iconId="i-mail"
                   error={errors.email}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  autoComplete="email"
                 />
 
                 <InputField
@@ -229,6 +237,8 @@ export function RegisterForm() {
                   isPassword
                   showPassword={showPassword}
                   onTogglePassword={() => setShowPassword(!showPassword)}
+                  autoCapitalize="none"
+                  autoComplete="new-password"
                 />
 
                 <InputField
@@ -237,6 +247,8 @@ export function RegisterForm() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   iconId="i-lock"
                   error={errors.confirmPassword}
+                  autoCapitalize="none"
+                  autoComplete="new-password"
                   isPassword
                   showPassword={showConfirmPassword}
                   onTogglePassword={() =>

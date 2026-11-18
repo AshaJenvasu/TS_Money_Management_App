@@ -10,6 +10,11 @@ interface InputFieldProps {
   isPassword?: boolean;
   showPassword?: boolean;
   onTogglePassword?: () => void;
+  // ส่งต่อให้ <input> เพื่อคุมพฤติกรรมคีย์บอร์ดมือถือ (เช่น ไม่ให้ auto-capitalize ตัวแรกของ email/username)
+  autoCapitalize?: "none" | "off" | "on" | "sentences" | "words" | "characters";
+  autoComplete?: string;
+  autoCorrect?: "on" | "off";
+  spellCheck?: boolean;
 }
 
 export function InputField({
@@ -22,6 +27,10 @@ export function InputField({
   isPassword = false,
   showPassword = false,
   onTogglePassword,
+  autoCapitalize,
+  autoComplete,
+  autoCorrect,
+  spellCheck,
 }: InputFieldProps) {
   const actualType = isPassword ? (showPassword ? "text" : "password") : type;
 
@@ -36,6 +45,10 @@ export function InputField({
           placeholder={placeholder}
           value={value}
           onChange={onChange}
+          autoCapitalize={autoCapitalize}
+          autoComplete={autoComplete}
+          autoCorrect={autoCorrect}
+          spellCheck={spellCheck}
         />
         {isPassword && onTogglePassword && (
           <button type="button" className="eye" onClick={onTogglePassword}>

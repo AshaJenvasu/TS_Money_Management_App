@@ -1,11 +1,20 @@
 import { createRoute, z } from "@hono/zod-openapi";
 
+// Email: trim + lowercase ที่ชั้น schema ทุกจุดที่รับค่ามาจาก client แล้วเก็บเป็นตัวพิมพ์เล็กเสมอ
+// (มือถือมัก auto-capitalize ตัวแรก ทำให้ "John@x.com" กับ "john@x.com" ถูกมองเป็นคนละบัญชีถ้าไม่ normalize)
+// ลำดับสำคัญ: ต้อง trim/lowercase ก่อน validate รูปแบบ
+export const normalizedEmailSchema = (message?: string) =>
+  z.string().trim().toLowerCase().email(message);
+
+// Username: "เก็บตัวพิมพ์ตามที่ user ตั้ง" (ตัดแค่ช่องว่างหัวท้าย) ห้าม lowercase ที่นี่
+// การเทียบ/กันซ้ำแบบไม่สนตัวพิมพ์ทำที่ DB ผ่านคอลัมน์ username_lower (generated, unique) และ UserRepository
+
 // ==========================================
 // 1. Register Schemas & Route
 // ==========================================
 export const RegisterBodySchema = z.object({
-  email: z.string().email().openapi({ example: "user@example.com" }),
-  username: z.string().min(1).openapi({ example: "johndoe" }),
+  email: normalizedEmailSchema().openapi({ example: "user@example.com" }),
+  username: z.string().trim().min(1).openapi({ example: "johndoe" }),
   password: z.string().min(6).openapi({ example: "password123" }),
 });
 
@@ -19,7 +28,8 @@ export const RegisterResponseSchema = z.object({
 // 2. Login Schemas & Route
 // ==========================================
 export const LoginBodySchema = z.object({
-  identifier: z.string().openapi({ example: "user@example.com" }),
+  // identifier เป็นได้ทั้ง email หรือ username: ตัดช่องว่างที่นี่ ส่วนการเทียบแบบไม่สนตัวพิมพ์ทำใน UserRepository.findByIdentifier
+  identifier: z.string().trim().openapi({ example: "user@example.com" }),
 
   password: z.string().min(6).openapi({
     example: "password123",
@@ -65,7 +75,7 @@ export const strongPasswordSchema = z
 
 // นิยาม Zod Schema สำหรับ Body ตอนขอ reset password link
 export const ForgotPasswordBodySchema = z.object({
-  email: z.string().email("รูปแบบ Email ไม่ถูกต้อง").openapi({
+  email: normalizedEmailSchema("รูปแบบ Email ไม่ถูกต้อง").openapi({
     example: "user@example.com",
   }),
 });

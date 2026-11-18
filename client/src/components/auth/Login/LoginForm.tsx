@@ -272,6 +272,10 @@ export function LoginForm() {
                   onChange={(e) => setIdentifier(e.target.value)}
                   iconId="i-mail"
                   error={errors.identifier}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  autoComplete="username"
                 />
 
                 {/* 2. Password Field */}
@@ -284,6 +288,8 @@ export function LoginForm() {
                   isPassword
                   showPassword={showPassword}
                   onTogglePassword={() => setShowPassword(!showPassword)}
+                  autoCapitalize="none"
+                  autoComplete="current-password"
                 />
 
                 {/* Remember Me */}
