@@ -6,20 +6,26 @@ export const fakeRedis = {
   store,
   // ตั้งเป็น true เพื่อจำลอง Redis ล่ม (ทุก command จะ throw)
   failing: false,
+  // จำลองล่มเฉพาะบาง command (เช่น อ่านได้แต่เขียนไม่ได้) และเลือก error ที่ throw ได้
+  // เช่น TypeError("fetch() URL is invalid") แบบที่ @upstash/redis ขว้างเมื่อ UPSTASH_REDIS_REST_URL ผิดรูปแบบ
+  failingCommands: new Set<string>(),
+  failureError: new Error("redis down") as Error,
 
   reset() {
     store.clear();
     fakeRedis.failing = false;
+    fakeRedis.failingCommands.clear();
+    fakeRedis.failureError = new Error("redis down");
   },
 
   client: {
     async get(key: string) {
-      fakeRedis.assertUp();
+      fakeRedis.assertUp("get");
       return fakeRedis.readLive(key)?.value ?? null;
     },
 
     async set(key: string, value: unknown, opts?: { ex?: number }) {
-      fakeRedis.assertUp();
+      fakeRedis.assertUp("set");
       store.set(key, {
         value,
         expiresAt: opts?.ex ? Date.now() + opts.ex * 1000 : null,
@@ -28,7 +34,7 @@ export const fakeRedis = {
     },
 
     async incr(key: string) {
-      fakeRedis.assertUp();
+      fakeRedis.assertUp("incr");
       const entry = fakeRedis.readLive(key);
       if (!entry) {
         store.set(key, { value: 1, expiresAt: null });
@@ -40,7 +46,7 @@ export const fakeRedis = {
 
     // เหมือน Redis: key ที่ไม่มี (หรือหมดอายุแล้ว) จะถูกสร้างใหม่จาก 0 แบบไม่มีอายุ แล้วลดเป็น -1
     async decr(key: string) {
-      fakeRedis.assertUp();
+      fakeRedis.assertUp("decr");
       const entry = fakeRedis.readLive(key);
       if (!entry) {
         store.set(key, { value: -1, expiresAt: null });
@@ -51,12 +57,12 @@ export const fakeRedis = {
     },
 
     async del(key: string) {
-      fakeRedis.assertUp();
+      fakeRedis.assertUp("del");
       return store.delete(key) ? 1 : 0;
     },
 
     async expire(key: string, seconds: number, option?: "NX") {
-      fakeRedis.assertUp();
+      fakeRedis.assertUp("expire");
       const entry = fakeRedis.readLive(key);
       if (!entry) return 0;
       if (option === "NX" && entry.expiresAt !== null) return 0;
@@ -66,7 +72,7 @@ export const fakeRedis = {
 
     // ตรงกับ Redis: -2 = ไม่มี key, -1 = ไม่มีอายุ, ไม่งั้นคืนวินาทีที่เหลือ
     async ttl(key: string) {
-      fakeRedis.assertUp();
+      fakeRedis.assertUp("ttl");
       const entry = fakeRedis.readLive(key);
       if (!entry) return -2;
       if (entry.expiresAt === null) return -1;
@@ -74,8 +80,10 @@ export const fakeRedis = {
     },
   },
 
-  assertUp() {
-    if (fakeRedis.failing) throw new Error("redis down");
+  assertUp(command: string) {
+    if (fakeRedis.failing || fakeRedis.failingCommands.has(command)) {
+      throw fakeRedis.failureError;
+    }
   },
 
   readLive(key: string) {

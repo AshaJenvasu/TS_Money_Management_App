@@ -212,6 +212,51 @@ describe("GET /api/v1/assets/search-coins - hardening", () => {
       expect(res.status).toBe(200);
       expect(coingeckoFetch).toHaveBeenCalledTimes(1);
     });
+
+    // error จริงบน production: UPSTASH_REDIS_REST_URL ผิดรูปแบบ -> fetch() ของ @upstash/redis ขว้าง TypeError ERR_INVALID_URL
+    const invalidUrlError = () =>
+      Object.assign(new TypeError("fetch() URL is invalid"), {
+        code: "ERR_INVALID_URL",
+      });
+
+    test("🔴 should return 200 with real CoinGecko results when only the cache READ throws", async () => {
+      const { authHeader } = await createTestUserWithToken();
+      fakeRedis.failingCommands.add("get");
+      fakeRedis.failureError = invalidUrlError();
+
+      const res = await search(authHeader, "bitcoin");
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual([
+        { id: "bitcoin", name: "Bitcoin", symbol: "BTC" },
+      ]);
+      expect(coingeckoFetch).toHaveBeenCalledTimes(1);
+    });
+
+    test("🔴 should return 200 with real CoinGecko results when only the cache WRITE throws", async () => {
+      const { authHeader } = await createTestUserWithToken();
+      fakeRedis.failingCommands.add("set");
+      fakeRedis.failureError = invalidUrlError();
+
+      const res = await search(authHeader, "bitcoin");
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual([
+        { id: "bitcoin", name: "Bitcoin", symbol: "BTC" },
+      ]);
+      expect(coingeckoFetch).toHaveBeenCalledTimes(1);
+    });
+
+    test("🔴 should return 200 when every Redis command throws a non-Error value", async () => {
+      const { authHeader } = await createTestUserWithToken();
+      fakeRedis.failing = true;
+      fakeRedis.failureError = "boom" as unknown as Error;
+
+      const res = await search(authHeader, "bitcoin");
+
+      expect(res.status).toBe(200);
+      expect(coingeckoFetch).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("rate limit per IP", () => {

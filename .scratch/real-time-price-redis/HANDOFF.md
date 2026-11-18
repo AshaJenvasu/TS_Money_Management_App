@@ -307,3 +307,13 @@ docker compose up -d postgres redis serverless-redis-http
 - **ข้อจำกัดที่รู้:** `lower()` ใน Postgres กับ `toLowerCase()` ของ JS ต่างกันในตัวอักษรนอก ASCII บางตัว (เช่น `İ` → DB `i`, JS `i̇`) ผลคือ username ที่มีตัวอักษรแบบนี้อาจ login ไม่เจอ/กันซ้ำไม่ครบ; ยังไม่ได้ตรวจว่า username ใน production มีอักขระนอก ASCII ไหม และ register ไม่จำกัด charset — ยังไม่แก้
 - **production migration: รันแล้ว (user สั่ง, `bun run db:deploy:prod`, Neon `neondb`)** `20261118100000_username_case_insensitive` apply สำเร็จ ไม่ fail; ตรวจหลังรันแบบอ่านอย่างเดียว: email ไม่ใช่ตัวเล็ก 0 คน, `username_lower` ตรง `lower(username)` ครบทุกแถว, มี index `users_username_lower_key`, migration จบสมบูรณ์ — **โค้ดใหม่ยังไม่ได้ deploy (ยังไม่ได้ commit/push)**: ระหว่างนี้ production ยังรันโค้ดเก่า โค้ดเก่าเทียบ email แบบ case-sensitive จึง login ด้วย email ที่เคยมีตัวพิมพ์ใหญ่ (1 บัญชีที่ถูก lowercase) ไม่ได้จนกว่าจะ deploy โค้ดใหม่ หรือพิมพ์ email ตัวเล็กทั้งหมด
 - **ค้าง:** ยังไม่ได้ commit/deploy โค้ดใหม่ (รอ user)
+
+## อัปเดต 2026-11-18 — สืบ error "Coin search cache write failed" บน production (ERR_INVALID_URL)
+
+- **อาการ:** log production `Coin search cache write failed` / `TypeError: fetch() URL is invalid` / `ERR_INVALID_URL` ตอนค้นหาเหรียญใน AssetCreateDialog
+- **ผลอ่านโค้ด:** `coin-search.services.ts` ครอบ try/catch ทั้ง "อ่าน cache" และ "เขียน cache" แล้ว (log warn แล้วข้ามไปถาม CoinGecko ตรง) บรรทัด log นั้นแปลว่า fail-open ทำงานถูก endpoint ยังตอบ 200 ได้ (ตอบ 502 เฉพาะตอน CoinGecko ล้ม ไม่ใช่ 503) จุดอื่นที่ใช้ Redis: `ipRateLimit` (try/catch fail-open), `portfolio.services.ts` (ครอบ `priceProvider.getPrices` ไว้ → `priceUnavailable`) ไม่พบจุดที่ไม่ครอบ ไม่ได้แก้ source
+- **สาเหตุจริงที่น่าจะเป็น:** ค่า `UPSTASH_REDIS_REST_URL` บน Render ผิดรูปแบบ (ไม่มี `https://`, มีเครื่องหมายคำพูด/ช่องว่าง/newline ปน หรือเอา TCP URL `rediss://` มาใส่แทน REST URL) ผลคือ cache ราคา, ราคา portfolio และ **IP rate limit (forgot-password/login/search-coins) ถูกข้ามเงียบๆ** บน production ทั้งหมด จนกว่าจะแก้ค่า env
+- **ยังไม่ได้ทำ (ไม่มีสิทธิ์/ห้ามแตะ Render):** ข้อ 1 เช็คค่า env บน Render และข้อ 4 ดู log เก่าของ Render ต้องให้ user ทำเอง (ไม่มี Render CLI/API key ในเครื่องนี้)
+- **Test ที่เพิ่ม:** `fake-redis.ts` เพิ่ม `failingCommands` (ล่มเฉพาะบาง command) + `failureError` (เลือก error ที่ throw); `asset-search-coins.test.ts` เพิ่ม 3 test: อ่าน cache throw `TypeError ERR_INVALID_URL` → 200, เขียน cache throw → 200, throw ค่าที่ไม่ใช่ Error → 200 (ตรวจกับผล CoinGecko จริงและยิง CoinGecko 1 ครั้ง) ลองถอด try/catch ฝั่งเขียนแล้ว 3 test fail ตามคาด แล้วคืนโค้ดเดิม
+- **ผลรัน:** server `vitest run --no-file-parallelism` 162/162 (รันขนานไฟล์จะ fail เพราะแชร์ DB ต้องใช้ `--no-file-parallelism`)
+- **ค้าง:** ยังไม่ได้ commit (รอ user)
